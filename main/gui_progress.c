@@ -42,6 +42,14 @@ void update_progress_ui(void) {
         return;
     }
     
+    // Throttle UI updates to avoid overwhelming LVGL
+    static uint32_t last_update_time = 0;
+    uint32_t current_time = lv_tick_get();
+    if (current_time - last_update_time < 200) { // Minimum 200ms between updates
+        return;
+    }
+    last_update_time = current_time;
+    
     // Update progress bar without animation to avoid conflicts
     int32_t progress_percent = (pending_total_bytes > 0) ? (pending_bytes_written * 100 / pending_total_bytes) : 0;
     lv_bar_set_value(progress_bar, progress_percent, LV_ANIM_OFF);
@@ -74,8 +82,8 @@ void firmware_progress_callback(size_t bytes_written, size_t total_bytes, const 
     }
     progress_update_pending = true;
     
-    // Add a small delay to reduce update frequency and avoid overwhelming LVGL
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Remove the delay - let the main task handle timing
+    // vTaskDelay(pdMS_TO_TICKS(100));
 }
 
 void flash_firmware_task(void *pvParameters) {

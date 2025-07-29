@@ -134,8 +134,9 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
         
         bytes_written += bytes_read;
         
-        // Update progress callback with reduced frequency to avoid LVGL conflicts
-        if (progress_callback && (bytes_written % (32 * 1024) == 0 || bytes_written == file_size)) {
+        // Update progress callback with very reduced frequency to avoid LVGL conflicts
+        // Only update every 256KB or at the end of the file to minimize UI conflicts
+        if (progress_callback && (bytes_written % (256 * 1024) == 0 || bytes_written == file_size)) {
             progress_callback(bytes_written, file_size, "Writing firmware...");
         }
         
@@ -158,22 +159,16 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
         return ret;
     }
     
-    // Set boot partition to the new firmware and automatically reboot
-    if (progress_callback) progress_callback(file_size, file_size, "Setting boot partition...");
-    ret = esp_ota_set_boot_partition(update_partition);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
-        return ret;
-    }
+    // DO NOT set boot partition to the new firmware automatically
+    // The launcher should remain the default boot partition
+    // User firmware should only be booted when explicitly requested
+    ESP_LOGI(TAG, "Firmware flash completed successfully");
+    if (progress_callback) progress_callback(file_size, file_size, "Flash complete! Returning to launcher...");
     
-    ESP_LOGI(TAG, "Boot partition set to: %s", update_partition->label);
-    if (progress_callback) progress_callback(file_size, file_size, "Rebooting to new firmware...");
-    ESP_LOGI(TAG, "Firmware flash completed successfully - rebooting to new firmware");
+    // Give time for UI update and logs, then return to launcher
+    vTaskDelay(pdMS_TO_TICKS(2000));
     
-    vTaskDelay(pdMS_TO_TICKS(2000)); // Give time for UI update and logs
-    esp_restart();
-    
-    return ESP_OK; // Never reached
+    return ESP_OK;
 }
 
 bool firmware_loader_is_firmware_ready(void) {
@@ -195,12 +190,14 @@ esp_err_t firmware_loader_restart_to_new_firmware(void) {
     const esp_partition_t *ota_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
     
     if (ota_partition) {
+        // Temporarily set boot partition to user firmware
         esp_err_t ret = esp_ota_set_boot_partition(ota_partition);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
             return ret;
         }
-        ESP_LOGI(TAG, "Boot partition set to: %s", ota_partition->label);
+        ESP_LOGI(TAG, "Boot partition temporarily set to: %s", ota_partition->label);
+        ESP_LOGI(TAG, "Note: System will return to launcher on next boot");
     }
     
     ESP_LOGI(TAG, "Restarting to user firmware...");
