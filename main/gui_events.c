@@ -102,8 +102,26 @@ void flash_firmware_event_handler(lv_event_t *e) {
         char *firmware_path = malloc(strlen(firmware_files[selected_firmware].full_path) + 1);
         strcpy(firmware_path, firmware_files[selected_firmware].full_path);
         
-        // Start flashing task
-        xTaskCreate(flash_firmware_task, "flash_task", 8192, firmware_path, 5, NULL);
+        // Start flashing task pinned to CPU1 to avoid conflicts with LVGL on CPU0
+        ESP_LOGI(TAG, "Starting firmware flashing task on CPU1 to avoid LVGL conflicts");
+        BaseType_t result = xTaskCreatePinnedToCore(
+            flash_firmware_task,    // Task function
+            "flash_task",          // Task name
+            8192,                  // Stack size
+            firmware_path,         // Task parameter
+            5,                     // Priority
+            NULL,                  // Task handle (not needed)
+            1                      // Pin to CPU1 (ESP32-P4 has cores 0 and 1)
+        );
+        
+        if (result != pdPASS) {
+            ESP_LOGE(TAG, "Failed to create flashing task on CPU1");
+            // Cleanup and reset state
+            free(firmware_path);
+            set_flashing_state(false);
+            lv_obj_remove_flag(flash_btn, LV_OBJ_FLAG_HIDDEN);
+            lv_screen_load(firmware_loader_screen);
+        }
     }
 }
 
