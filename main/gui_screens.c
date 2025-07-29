@@ -303,7 +303,7 @@ void update_firmware_list(void) {
         return;
     }
     
-    firmware_count = firmware_loader_scan_firmware_files("/sdcard", firmware_files, 16);
+    firmware_count = firmware_loader_scan_firmware_files("/", firmware_files, 16);
     
     if (firmware_count <= 0) {
         lv_obj_t *item = lv_button_create(firmware_list);
