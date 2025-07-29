@@ -1,0 +1,9 @@
+# 忽略构建输出目录
+/build/
+
+# 忽略 ESP-IDF managed components
+/managed_components/
+
+/Launcher-2.4.10/
+
+/M5Tab5-UserDemo-main/
