@@ -20,4 +20,8 @@ extern volatile size_t pending_total_bytes;
 extern char pending_step_description[128];
 extern bool flashing_in_progress;
 
+// Boot screen state
+extern bool boot_screen_active;
+extern bool should_show_main;
+
 #endif // GUI_STATE_H

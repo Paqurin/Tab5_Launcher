@@ -25,6 +25,14 @@ void main_menu_event_handler(lv_event_t *e) {
                 update_firmware_list();
                 lv_screen_load(firmware_loader_screen);
                 break;
+            case 2: // Run Firmware
+                if (firmware_loader_is_firmware_ready()) {
+                    // Show splash screen for user choice
+                    lv_screen_load(splash_screen);
+                } else {
+                    ESP_LOGW(TAG, "No firmware available to run");
+                }
+                break;
         }
     }
 }
@@ -103,11 +111,16 @@ void splash_button_event_handler(lv_event_t *e) {
     if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
         uint32_t choice = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
         
+        // Disable boot screen timeout
+        boot_screen_active = false;
+        
         if (choice == 0) {
-            // Boot to firmware
+            // Boot to firmware immediately
+            ESP_LOGI(TAG, "User selected to boot firmware");
             firmware_loader_restart_to_new_firmware();
         } else {
             // Stay in launcher
+            ESP_LOGI(TAG, "User selected to stay in launcher");
             lv_screen_load(main_screen);
         }
     }

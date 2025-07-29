@@ -14,3 +14,7 @@ volatile size_t pending_bytes_written = 0;
 volatile size_t pending_total_bytes = 0;
 char pending_step_description[128] = {0};
 bool flashing_in_progress = false;
+
+// Boot screen state
+bool boot_screen_active = false;
+bool should_show_main = false;

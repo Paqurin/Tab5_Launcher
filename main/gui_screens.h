@@ -60,4 +60,14 @@ void update_file_list(void);
  */
 void update_firmware_list(void);
 
+/**
+ * @brief Update main screen display
+ */
+void update_main_screen(void);
+
+/**
+ * @brief Update main screen display
+ */
+void update_main_screen(void);
+
 #endif // GUI_SCREENS_H

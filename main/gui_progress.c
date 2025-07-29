@@ -12,7 +12,8 @@ static const char *TAG = "GUI_PROGRESS";
 
 // Flag to signal screen change from task
 static volatile bool should_show_splash = false;
-static volatile bool should_show_main = false;
+// Remove the conflicting declaration - use the one from gui_state.h
+// static volatile bool should_show_main = false;
 
 void gui_progress_init(void) {
     progress_update_pending = false;
@@ -89,13 +90,18 @@ void firmware_progress_callback(size_t bytes_written, size_t total_bytes, const 
 void flash_firmware_task(void *pvParameters) {
     char *firmware_path = (char *)pvParameters;
     
+    ESP_LOGI(TAG, "Starting firmware flash task for: %s", firmware_path);
+    
     esp_err_t ret = firmware_loader_flash_from_sd_with_progress(firmware_path, firmware_progress_callback);
     
     if (ret == ESP_OK) {
-        // Flash successful - the firmware_loader will handle automatic reboot
-        firmware_progress_callback(100, 100, "Flash successful! Rebooting...");
-        // Note: esp_restart() will be called by firmware_loader, so we won't reach here
+        // Flash successful - show completion message and return to main screen
+        ESP_LOGI(TAG, "Firmware flash completed successfully");
+        firmware_progress_callback(100, 100, "Flash complete! Returning to launcher...");
+        vTaskDelay(pdMS_TO_TICKS(3000)); // Show completion message for 3 seconds
+        should_show_main = true;  // Return to main screen
     } else {
+        ESP_LOGE(TAG, "Firmware flash failed with error: %s", esp_err_to_name(ret));
         firmware_progress_callback(0, 100, "Flash failed!");
         vTaskDelay(pdMS_TO_TICKS(3000));
         should_show_main = true;  // Go back to main screen on failure

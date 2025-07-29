@@ -8,9 +8,13 @@
 #include "hal.h"
 #include "sd_manager.h"
 #include "gui_manager.h"
+#include "gui_state.h"
 #include "firmware_loader.h"
+#include "gui_screens.h"
 
 static const char *TAG = "LAUNCHER";
+static uint32_t boot_timer_start = 0;
+static const uint32_t BOOT_SCREEN_TIMEOUT_MS = 5000; // 5 seconds
 
 void app_main(void) {
     ESP_LOGI(TAG, "Starting Simplified Launcher");
@@ -50,8 +54,38 @@ void app_main(void) {
     // Unlock display
     bsp_display_unlock();
     
+    // Check if firmware is available and show appropriate screen
+    if (firmware_loader_is_firmware_ready()) {
+        ESP_LOGI(TAG, "Firmware detected, showing boot screen for %d seconds", (int)(BOOT_SCREEN_TIMEOUT_MS / 1000));
+        boot_screen_active = true;
+        boot_timer_start = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        
+        // Show splash screen with boot option
+        lv_screen_load(splash_screen);
+    } else {
+        ESP_LOGI(TAG, "No firmware detected, going directly to launcher");
+        lv_screen_load(main_screen);
+    }
+    
     // Main loop
     while (1) {
+        // Handle boot screen timeout
+        if (boot_screen_active) {
+            uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            if (current_time - boot_timer_start >= BOOT_SCREEN_TIMEOUT_MS) {
+                ESP_LOGI(TAG, "Boot screen timeout, auto-booting firmware");
+                boot_screen_active = false;
+                firmware_loader_restart_to_new_firmware();
+            }
+        }
+        
+        // Handle return to main screen after flash completion
+        if (should_show_main) {
+            should_show_main = false;
+            update_main_screen(); // Refresh the main screen to show updated firmware status
+            lv_screen_load(main_screen);
+        }
+        
         gui_manager_update();
         vTaskDelay(pdMS_TO_TICKS(10));
     }

@@ -165,7 +165,7 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
     ESP_LOGI(TAG, "Firmware flash completed successfully");
     if (progress_callback) progress_callback(file_size, file_size, "Flash complete! Returning to launcher...");
     
-    // Give time for UI update and logs, then return to launcher
+    // Give time for UI update, then signal completion
     vTaskDelay(pdMS_TO_TICKS(2000));
     
     return ESP_OK;
