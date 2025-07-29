@@ -59,7 +59,15 @@ bool firmware_loader_is_firmware_ready(void);
 int firmware_loader_scan_firmware_files(const char *directory, firmware_info_t *firmware_list, int max_count);
 
 /**
- * @brief Restart device to boot new firmware
+ * @brief Boot firmware once without changing default boot partition
+ * This uses OTA rollback mechanism to ensure launcher remains default
+ * @return ESP_OK (never returns)
+ */
+esp_err_t firmware_loader_boot_firmware_once(void);
+
+/**
+ * @brief Restart device to boot new firmware (legacy function name)
+ * This is an alias for firmware_loader_boot_firmware_once()
  * @return ESP_OK (never returns)
  */
 esp_err_t firmware_loader_restart_to_new_firmware(void);

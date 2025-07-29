@@ -19,14 +19,28 @@ static const uint32_t BOOT_SCREEN_TIMEOUT_MS = 5000; // 5 seconds
 void app_main(void) {
     ESP_LOGI(TAG, "Starting Simplified Launcher");
     
-    // Ensure launcher is always the default boot partition
+    // CRITICAL FIX: Ensure launcher (factory) is always the default boot partition
+    // This prevents firmware from permanently taking over the boot process
     const esp_partition_t *factory_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
-    if (factory_partition) {
+    const esp_partition_t *running_partition = esp_ota_get_running_partition();
+    
+    if (factory_partition && running_partition) {
+        ESP_LOGI(TAG, "Currently running from: %s", running_partition->label);
+        
+        // Always ensure factory is the default boot partition
+        // This is safe to call even if factory is already the default
         esp_err_t ret = esp_ota_set_boot_partition(factory_partition);
         if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Boot partition confirmed as launcher (factory)");
+            ESP_LOGI(TAG, "Factory partition confirmed as default boot partition");
         } else {
-            ESP_LOGW(TAG, "Failed to set boot partition to factory: %s", esp_err_to_name(ret));
+            ESP_LOGW(TAG, "Failed to set factory as default boot partition: %s", esp_err_to_name(ret));
+        }
+        
+        // If we're running from OTA partition, it means we just booted firmware
+        // The rollback mechanism should handle returning to factory on next boot
+        if (running_partition->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) {
+            ESP_LOGI(TAG, "Running from firmware partition - this is a one-time boot");
+            ESP_LOGI(TAG, "System will return to launcher on next restart");
         }
     }
     
@@ -75,7 +89,7 @@ void app_main(void) {
             if (current_time - boot_timer_start >= BOOT_SCREEN_TIMEOUT_MS) {
                 ESP_LOGI(TAG, "Boot screen timeout, auto-booting firmware");
                 boot_screen_active = false;
-                firmware_loader_restart_to_new_firmware();
+                firmware_loader_boot_firmware_once();
             }
         }
         

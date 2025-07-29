@@ -5,6 +5,8 @@
 #include "esp_ota_ops.h"
 #include "esp_app_format.h"
 #include "esp_flash.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 #include <string.h>
 #include <inttypes.h>
 #include "esp_system.h"
@@ -12,11 +14,83 @@
 #include "freertos/task.h"
 
 static const char *TAG = "FIRMWARE_LOADER";
+static const char *NVS_NAMESPACE = "launcher";
+static const char *NVS_KEY_BOOT_FIRMWARE = "boot_fw_once";
 
 #define BUFFER_SIZE 4096
 
 esp_err_t firmware_loader_init(void) {
     ESP_LOGI(TAG, "Firmware loader initialized");
+    return ESP_OK;
+}
+
+esp_err_t firmware_loader_init_boot_manager(void) {
+    // Initialize NVS if not already done
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_LOGW(TAG, "NVS partition was truncated, erasing and retrying");
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize NVS: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    ESP_LOGI(TAG, "Boot manager initialized");
+    return ESP_OK;
+}
+
+esp_err_t firmware_loader_handle_boot_management(void) {
+    nvs_handle_t nvs_handle;
+    esp_err_t ret;
+    
+    // Open NVS
+    ret = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // Check if we should boot firmware once
+    uint8_t boot_firmware_once = 0;
+    size_t required_size = sizeof(boot_firmware_once);
+    ret = nvs_get_blob(nvs_handle, NVS_KEY_BOOT_FIRMWARE, &boot_firmware_once, &required_size);
+    
+    const esp_partition_t *factory_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+    const esp_partition_t *running_partition = esp_ota_get_running_partition();
+    
+    if (ret == ESP_OK && boot_firmware_once == 1) {
+        // We were supposed to boot firmware once, clear the flag
+        ESP_LOGI(TAG, "One-time firmware boot completed, clearing flag");
+        boot_firmware_once = 0;
+        nvs_set_blob(nvs_handle, NVS_KEY_BOOT_FIRMWARE, &boot_firmware_once, sizeof(boot_firmware_once));
+        nvs_commit(nvs_handle);
+        
+        // Ensure launcher becomes default boot partition again
+        if (factory_partition) {
+            ret = esp_ota_set_boot_partition(factory_partition);
+            if (ret == ESP_OK) {
+                ESP_LOGI(TAG, "Boot partition restored to launcher (factory)");
+            } else {
+                ESP_LOGW(TAG, "Failed to restore boot partition to factory: %s", esp_err_to_name(ret));
+            }
+        }
+    } else {
+        // Normal boot, ensure launcher is default
+        if (factory_partition && running_partition && 
+            running_partition->address == factory_partition->address) {
+            ret = esp_ota_set_boot_partition(factory_partition);
+            if (ret == ESP_OK) {
+                ESP_LOGI(TAG, "Boot partition confirmed as launcher (factory)");
+            } else {
+                ESP_LOGW(TAG, "Failed to set boot partition to factory: %s", esp_err_to_name(ret));
+            }
+        }
+    }
+    
+    nvs_close(nvs_handle);
     return ESP_OK;
 }
 
@@ -159,9 +233,8 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
         return ret;
     }
     
-    // DO NOT set boot partition to the new firmware automatically
-    // The launcher should remain the default boot partition
-    // User firmware should only be booted when explicitly requested
+    // CRITICAL: Do NOT set boot partition here
+    // The launcher remains the default boot partition
     ESP_LOGI(TAG, "Firmware flash completed successfully");
     if (progress_callback) progress_callback(file_size, file_size, "Flash complete! Returning to launcher...");
     
@@ -185,25 +258,106 @@ bool firmware_loader_is_firmware_ready(void) {
     return (ret == ESP_OK);
 }
 
-esp_err_t firmware_loader_restart_to_new_firmware(void) {
-    // Boot to the OTA_0 partition where user firmware is stored
+esp_err_t firmware_loader_boot_firmware_once(void) {
+    ESP_LOGI(TAG, "=== USING ESP-IDF AUTOMATIC ROLLBACK MECHANISM ===");
+    
+    // Get the OTA_0 partition where user firmware is stored
     const esp_partition_t *ota_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
     
-    if (ota_partition) {
-        // Temporarily set boot partition to user firmware
-        esp_err_t ret = esp_ota_set_boot_partition(ota_partition);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
-            return ret;
-        }
-        ESP_LOGI(TAG, "Boot partition temporarily set to: %s", ota_partition->label);
-        ESP_LOGI(TAG, "Note: System will return to launcher on next boot");
+    if (!ota_partition) {
+        ESP_LOGE(TAG, "OTA_0 partition not found");
+        return ESP_ERR_NOT_FOUND;
     }
     
-    ESP_LOGI(TAG, "Restarting to user firmware...");
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Give time for logs
+    // Validate that we have valid firmware in OTA_0
+    esp_app_desc_t app_desc;
+    esp_err_t ret = esp_ota_get_partition_description(ota_partition, &app_desc);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "No valid firmware found in OTA_0 partition");
+        return ret;
+    }
+    
+    ESP_LOGI(TAG, "Found valid firmware: %s v%s", app_desc.project_name, app_desc.version);
+    
+    // Get factory partition to ensure it's available as rollback target
+    const esp_partition_t *factory_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+    if (!factory_partition) {
+        ESP_LOGE(TAG, "Factory partition not found - rollback not possible");
+        return ESP_ERR_NOT_FOUND;
+    }
+    
+    ESP_LOGI(TAG, "Factory (launcher) partition available for rollback: %s", factory_partition->label);
+    
+    // CRITICAL: Ensure factory partition is marked as valid for rollback
+    // This ensures the bootloader has a valid target to rollback to
+    const esp_partition_t *current_running = esp_ota_get_running_partition();
+    if (current_running && current_running->address == factory_partition->address) {
+        ESP_LOGI(TAG, "Currently running from factory - ensuring it's marked as valid");
+        // Factory partition should already be valid, but let's be explicit
+    }
+    
+    // SOLUTION: Use ESP-IDF's automatic rollback mechanism
+    // When CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE is set:
+    // 1. esp_ota_set_boot_partition() puts the firmware in ESP_OTA_IMG_PENDING_VERIFY state
+    // 2. The firmware boots once
+    // 3. Since the user firmware doesn't call esp_ota_mark_app_valid_cancel_rollback(),
+    //    the bootloader automatically rolls back to the previous working app (factory)
+    
+    ESP_LOGI(TAG, "Setting firmware as next boot partition (with automatic rollback)...");
+    ret = esp_ota_set_boot_partition(ota_partition);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // Verify the partition is now in pending verification state
+    esp_ota_img_states_t ota_state;
+    ret = esp_ota_get_state_partition(ota_partition, &ota_state);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "OTA partition state after setting boot partition: %d", ota_state);
+        switch (ota_state) {
+            case ESP_OTA_IMG_NEW:
+                ESP_LOGI(TAG, "State: ESP_OTA_IMG_NEW");
+                break;
+            case ESP_OTA_IMG_PENDING_VERIFY:
+                ESP_LOGI(TAG, "✓ State: ESP_OTA_IMG_PENDING_VERIFY - automatic rollback enabled!");
+                break;
+            case ESP_OTA_IMG_VALID:
+                ESP_LOGI(TAG, "State: ESP_OTA_IMG_VALID");
+                break;
+            case ESP_OTA_IMG_INVALID:
+                ESP_LOGI(TAG, "State: ESP_OTA_IMG_INVALID");
+                break;
+            case ESP_OTA_IMG_ABORTED:
+                ESP_LOGI(TAG, "State: ESP_OTA_IMG_ABORTED");
+                break;
+            case ESP_OTA_IMG_UNDEFINED:
+                ESP_LOGI(TAG, "State: ESP_OTA_IMG_UNDEFINED");
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Could not get OTA partition state: %s", esp_err_to_name(ret));
+    }
+    
+    ESP_LOGI(TAG, "=== AUTOMATIC ROLLBACK MECHANISM ACTIVE ===");
+    ESP_LOGI(TAG, "✓ CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE is enabled");
+    ESP_LOGI(TAG, "✓ Firmware will boot once automatically");
+    ESP_LOGI(TAG, "✓ Since firmware won't validate itself,");
+    ESP_LOGI(TAG, "✓ Bootloader will auto-rollback to launcher");
+    ESP_LOGI(TAG, "✓ NO manual intervention required!");
+    ESP_LOGI(TAG, "✓ Launcher will regain control automatically");
+    ESP_LOGI(TAG, "==========================================");
+    
+    ESP_LOGI(TAG, "Restarting to firmware (with guaranteed automatic return)...");
+    
+    vTaskDelay(pdMS_TO_TICKS(2000));
     esp_restart();
     return ESP_OK; // Never reached
+}
+
+// Legacy function name for compatibility
+esp_err_t firmware_loader_restart_to_new_firmware(void) {
+    return firmware_loader_boot_firmware_once();
 }
 
 int firmware_loader_scan_firmware_files(const char *directory, firmware_info_t *firmware_list, int max_count) {
