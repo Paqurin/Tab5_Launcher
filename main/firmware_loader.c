@@ -1,6 +1,11 @@
 #include "firmware_loader.h"
 #include "sd_manager.h"
+#include "hal.h"
+#include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_ota_ops.h"
 #include "esp_app_format.h"
@@ -344,15 +349,19 @@ esp_err_t firmware_loader_boot_firmware_once(void) {
     ESP_LOGI(TAG, "✓ Firmware will boot once automatically");
     ESP_LOGI(TAG, "✓ Since firmware won't validate itself,");
     ESP_LOGI(TAG, "✓ Bootloader will auto-rollback to launcher");
-    ESP_LOGI(TAG, "✓ NO manual intervention required!");
+    ESP_LOGI(TAG, "✓ Manual power cycle required for GT911 reset");
     ESP_LOGI(TAG, "✓ Launcher will regain control automatically");
     ESP_LOGI(TAG, "==========================================");
     
-    ESP_LOGI(TAG, "Restarting to firmware (with guaranteed automatic return)...");
+    ESP_LOGI(TAG, "Firmware configured for next boot. Manual reboot required.");
     
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    esp_restart();
-    return ESP_OK; // Never reached
+    // Instead of automatic reboot, we'll show a dialog instructing the user
+    // to manually power cycle the device. This ensures:
+    // 1. Complete power-off of GT911 touch controller
+    // 2. Clean boot into app partition
+    // 3. Automatic rollback to launcher after firmware runs
+    
+    return ESP_OK;
 }
 
 // Legacy function name for compatibility

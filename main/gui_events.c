@@ -112,12 +112,21 @@ void splash_button_event_handler(lv_event_t *e) {
         uint32_t choice = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
         
         // Disable boot screen timeout
+        extern bool boot_screen_active;
         boot_screen_active = false;
         
         if (choice == 0) {
-            // Boot to firmware immediately
+            // Configure firmware for boot and show manual reboot dialog
             ESP_LOGI(TAG, "User selected to boot firmware");
-            firmware_loader_restart_to_new_firmware();
+            esp_err_t ret = firmware_loader_boot_firmware_once();
+            if (ret == ESP_OK) {
+                // Show the manual reboot dialog instead of automatically rebooting
+                lv_screen_load(reboot_dialog_screen);
+            } else {
+                ESP_LOGE(TAG, "Failed to configure firmware boot: %s", esp_err_to_name(ret));
+                // Stay on splash screen or go back to main
+                lv_screen_load(main_screen);
+            }
         } else {
             // Stay in launcher
             ESP_LOGI(TAG, "User selected to stay in launcher");
@@ -131,7 +140,9 @@ void back_button_event_handler(lv_event_t *e) {
     if (code == LV_EVENT_CLICKED) {
         int screen_id = (int)(uintptr_t)lv_event_get_user_data(e);
         
-        if (screen_id == 1) { // File manager back button
+        if (screen_id == 0) { // Reboot dialog back button
+            lv_screen_load(main_screen);
+        } else if (screen_id == 1) { // File manager back button
             if (strcmp(current_directory, "/sdcard") != 0) {
                 // Go up one directory
                 char *last_slash = strrchr(current_directory, '/');

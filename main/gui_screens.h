@@ -9,6 +9,7 @@ extern lv_obj_t *file_manager_screen;
 extern lv_obj_t *firmware_loader_screen;
 extern lv_obj_t *progress_screen;
 extern lv_obj_t *splash_screen;
+extern lv_obj_t *reboot_dialog_screen;
 
 // UI element objects
 extern lv_obj_t *file_list;
@@ -49,6 +50,11 @@ void create_progress_screen(void);
  * @brief Create splash screen
  */
 void create_splash_screen(void);
+
+/**
+ * @brief Create manual reboot dialog screen
+ */
+void create_reboot_dialog_screen(void);
 
 /**
  * @brief Update file list display
