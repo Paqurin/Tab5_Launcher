@@ -3,6 +3,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
 #include "hal.h"
 #include "sd_manager.h"
 #include "gui_manager.h"
@@ -12,6 +14,17 @@ static const char *TAG = "LAUNCHER";
 
 void app_main(void) {
     ESP_LOGI(TAG, "Starting Simplified Launcher");
+    
+    // Ensure launcher is always the default boot partition
+    const esp_partition_t *factory_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+    if (factory_partition) {
+        esp_err_t ret = esp_ota_set_boot_partition(factory_partition);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "Boot partition confirmed as launcher (factory)");
+        } else {
+            ESP_LOGW(TAG, "Failed to set boot partition to factory: %s", esp_err_to_name(ret));
+        }
+    }
     
     // Initialize hardware
     ESP_LOGI(TAG, "Initializing hardware...");

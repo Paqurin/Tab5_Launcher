@@ -42,9 +42,9 @@ void update_progress_ui(void) {
         return;
     }
     
-    // Update progress bar
+    // Update progress bar without animation to avoid conflicts
     int32_t progress_percent = (pending_total_bytes > 0) ? (pending_bytes_written * 100 / pending_total_bytes) : 0;
-    lv_bar_set_value(progress_bar, progress_percent, LV_ANIM_ON);
+    lv_bar_set_value(progress_bar, progress_percent, LV_ANIM_OFF);
     
     // Update progress text
     char progress_text[128];
@@ -64,6 +64,8 @@ void update_progress_ui(void) {
 
 void firmware_progress_callback(size_t bytes_written, size_t total_bytes, const char *step_description) {
     // Store the progress data in volatile variables
+    // This function may be called from a different task context, so we just store data
+    // and let the main GUI task handle the actual UI updates
     pending_bytes_written = bytes_written;
     pending_total_bytes = total_bytes;
     if (step_description) {
@@ -71,6 +73,9 @@ void firmware_progress_callback(size_t bytes_written, size_t total_bytes, const 
         pending_step_description[sizeof(pending_step_description) - 1] = '\0';
     }
     progress_update_pending = true;
+    
+    // Add a small delay to reduce update frequency and avoid overwhelming LVGL
+    vTaskDelay(pdMS_TO_TICKS(100));
 }
 
 void flash_firmware_task(void *pvParameters) {
@@ -79,15 +84,9 @@ void flash_firmware_task(void *pvParameters) {
     esp_err_t ret = firmware_loader_flash_from_sd_with_progress(firmware_path, firmware_progress_callback);
     
     if (ret == ESP_OK) {
-        firmware_progress_callback(100, 100, "Flash successful!");
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        
-        // Check if firmware is ready and show appropriate screen
-        if (firmware_loader_is_firmware_ready()) {
-            should_show_splash = true;  // Show splash screen to let user choose
-        } else {
-            should_show_main = true;    // Go back to main screen
-        }
+        // Flash successful - the firmware_loader will handle automatic reboot
+        firmware_progress_callback(100, 100, "Flash successful! Rebooting...");
+        // Note: esp_restart() will be called by firmware_loader, so we won't reach here
     } else {
         firmware_progress_callback(0, 100, "Flash failed!");
         vTaskDelay(pdMS_TO_TICKS(3000));

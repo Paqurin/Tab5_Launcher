@@ -79,46 +79,13 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
     
     ESP_LOGI(TAG, "Firmware file size: %zu bytes", file_size);
     
-    // Get partitions
-    const esp_partition_t *running_partition = esp_ota_get_running_partition();
-    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+    // Always use OTA_0 partition for user firmware
+    const esp_partition_t *update_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
     
     if (!update_partition) {
-        ESP_LOGE(TAG, "No OTA partition available");
+        ESP_LOGE(TAG, "OTA_0 partition not found");
         fclose(file);
         return ESP_ERR_NOT_FOUND;
-    }
-    
-    // Check if the selected partition is different from running partition
-    if (update_partition == running_partition) {
-        ESP_LOGE(TAG, "Cannot update to the same partition that's currently running");
-        ESP_LOGE(TAG, "Current: %s, Target: %s", running_partition->label, update_partition->label);
-        
-        // Try to find an alternative partition
-        esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-        const esp_partition_t *alternative_partition = NULL;
-        
-        while (it != NULL) {
-            const esp_partition_t *part = esp_partition_get(it);
-            if (part != running_partition && 
-                (part->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0 || 
-                 part->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_1 ||
-                 part->subtype == ESP_PARTITION_SUBTYPE_APP_FACTORY)) {
-                alternative_partition = part;
-                break;
-            }
-            it = esp_partition_next(it);
-        }
-        esp_partition_iterator_release(it);
-        
-        if (alternative_partition) {
-            update_partition = alternative_partition;
-            ESP_LOGI(TAG, "Using alternative partition: %s", update_partition->label);
-        } else {
-            ESP_LOGE(TAG, "No alternative partition found");
-            fclose(file);
-            return ESP_ERR_NOT_FOUND;
-        }
     }
     
     ESP_LOGI(TAG, "Writing to partition: %s (0x%08" PRIx32 ", %" PRIu32 " bytes)", 
@@ -167,8 +134,8 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
         
         bytes_written += bytes_read;
         
-        // Update progress callback
-        if (progress_callback) {
+        // Update progress callback with reduced frequency to avoid LVGL conflicts
+        if (progress_callback && (bytes_written % (32 * 1024) == 0 || bytes_written == file_size)) {
             progress_callback(bytes_written, file_size, "Writing firmware...");
         }
         
@@ -191,31 +158,55 @@ esp_err_t firmware_loader_flash_from_sd_with_progress(const char *firmware_path,
         return ret;
     }
     
-    // DO NOT set boot partition automatically - let user choose
-    if (progress_callback) progress_callback(file_size, file_size, "Flash completed!");
-    ESP_LOGI(TAG, "Firmware flash completed successfully");
-    ESP_LOGI(TAG, "Firmware is ready but boot partition not changed - user can choose to boot");
+    // Set boot partition to the new firmware and automatically reboot
+    if (progress_callback) progress_callback(file_size, file_size, "Setting boot partition...");
+    ret = esp_ota_set_boot_partition(update_partition);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
+        return ret;
+    }
     
-    return ESP_OK;
+    ESP_LOGI(TAG, "Boot partition set to: %s", update_partition->label);
+    if (progress_callback) progress_callback(file_size, file_size, "Rebooting to new firmware...");
+    ESP_LOGI(TAG, "Firmware flash completed successfully - rebooting to new firmware");
+    
+    vTaskDelay(pdMS_TO_TICKS(2000)); // Give time for UI update and logs
+    esp_restart();
+    
+    return ESP_OK; // Never reached
 }
 
 bool firmware_loader_is_firmware_ready(void) {
-    const esp_partition_t *running_partition = esp_ota_get_running_partition();
-    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+    // Check if there's valid firmware in the OTA_0 partition
+    const esp_partition_t *ota_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
     
-    if (!update_partition) {
+    if (!ota_partition) {
         return false;
     }
     
-    // Check if there's a different partition with firmware
-    if (update_partition != running_partition) {
-        // Check if the partition has valid firmware
-        esp_app_desc_t app_desc;
-        esp_err_t ret = esp_ota_get_partition_description(update_partition, &app_desc);
-        return (ret == ESP_OK);
+    // Check if the partition has valid firmware
+    esp_app_desc_t app_desc;
+    esp_err_t ret = esp_ota_get_partition_description(ota_partition, &app_desc);
+    return (ret == ESP_OK);
+}
+
+esp_err_t firmware_loader_restart_to_new_firmware(void) {
+    // Boot to the OTA_0 partition where user firmware is stored
+    const esp_partition_t *ota_partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
+    
+    if (ota_partition) {
+        esp_err_t ret = esp_ota_set_boot_partition(ota_partition);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
+            return ret;
+        }
+        ESP_LOGI(TAG, "Boot partition set to: %s", ota_partition->label);
     }
     
-    return false;
+    ESP_LOGI(TAG, "Restarting to user firmware...");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Give time for logs
+    esp_restart();
+    return ESP_OK; // Never reached
 }
 
 int firmware_loader_scan_firmware_files(const char *directory, firmware_info_t *firmware_list, int max_count) {
@@ -274,23 +265,4 @@ int firmware_loader_scan_firmware_files(const char *directory, firmware_info_t *
     
     ESP_LOGI(TAG, "Found %d firmware files in %s", firmware_count, directory);
     return firmware_count;
-}
-
-esp_err_t firmware_loader_restart_to_new_firmware(void) {
-    // Set the boot partition to the new firmware before restarting
-    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
-    
-    if (update_partition) {
-        esp_err_t ret = esp_ota_set_boot_partition(update_partition);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
-            return ret;
-        }
-        ESP_LOGI(TAG, "Boot partition set to: %s", update_partition->label);
-    }
-    
-    ESP_LOGI(TAG, "Restarting to new firmware...");
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Give time for logs
-    esp_restart();
-    return ESP_OK; // Never reached
 }
