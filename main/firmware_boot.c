@@ -1,4 +1,5 @@
 #include "firmware_loader.h"
+#include "hal.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -94,6 +95,10 @@ esp_err_t firmware_loader_boot_firmware_once(void) {
         ESP_LOGE(TAG, "Failed to set boot partition: %s", esp_err_to_name(ret));
         return ret;
     }
+    
+    // CRITICAL: Properly deinitialize GT911 touch panel before reboot
+    ESP_LOGI(TAG, "Deinitializing GT911 touch panel before firmware boot...");
+    hal_touchpad_deinit();
     
     ESP_LOGI(TAG, "Restarting to boot firmware once...");
     esp_restart();
