@@ -11,6 +11,6 @@ extern lv_indev_t *lvTouchpad;
 // HAL initialization functions
 void hal_init(void);
 void hal_touchpad_init(void);
-void hal_touchpad_deinit(void);
+// void hal_touchpad_deinit(void); not needed anymore
 
 #endif // HAL_H

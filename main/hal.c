@@ -62,9 +62,9 @@ void hal_touchpad_init(void)
     lv_indev_set_display(lvTouchpad, lvDisp);
 }
 
-void hal_touchpad_deinit(void)
-{
-    // I think simply resetting the touch chip without initializing it again 
-    // would leave init to the user FW which shall fix the problem
-    bsp_reset_tp();
-}
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }

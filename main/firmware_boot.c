@@ -1,5 +1,4 @@
 #include "firmware_loader.h"
-#include "hal.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -97,13 +96,9 @@ esp_err_t firmware_loader_boot_firmware_once(void) {
         return ret;
     }
     
-    // CRITICAL: Properly deinitialize GT911 touch panel before reboot
-    ESP_LOGI(TAG, "Deinitializing GT911 touch panel before firmware boot...");
-    hal_touchpad_deinit();
-    
     ESP_LOGI(TAG, "Restarting to boot firmware once...");
     esp_sleep_enable_timer_wakeup(50000); // 50,000us = 50ms
-    esp_deep_sleep_start();
+    esp_deep_sleep_start(); // Use deep sleep to force a full reboot (including the GT911 touch panel)
     return ESP_OK;
 }
 
