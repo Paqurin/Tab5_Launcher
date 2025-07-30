@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "lvgl.h"
 
 /**
  * @brief Initialize progress handling
@@ -15,7 +16,7 @@ void gui_progress_init(void);
 void update_progress_ui(void);
 
 /**
- * @brief Firmware progress callback
+ * @brief Firmware progress callback (thread-safe)
  */
 void firmware_progress_callback(size_t bytes_written, size_t total_bytes, const char *step_description);
 

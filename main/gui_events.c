@@ -139,7 +139,7 @@ void splash_button_event_handler(lv_event_t *e) {
             esp_err_t ret = firmware_loader_boot_firmware_once();
             if (ret == ESP_OK) {
                 // Show the manual reboot dialog instead of automatically rebooting
-                lv_screen_load(reboot_dialog_screen);
+                // lv_screen_load(reboot_dialog_screen); removed since the boot function just reboots the machine
             } else {
                 ESP_LOGE(TAG, "Failed to configure firmware boot: %s", esp_err_to_name(ret));
                 // Stay on splash screen or go back to main

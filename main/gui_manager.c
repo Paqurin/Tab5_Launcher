@@ -38,6 +38,9 @@ esp_err_t gui_manager_init(lv_display_t *disp) {
 }
 
 void gui_manager_update(void) {
-    update_progress_ui();  // Handle pending progress updates and screen transitions
+    // Handle screen transitions and progress state
+    update_progress_ui();
+    
+    // Process LVGL tasks
     lv_timer_handler();
 }

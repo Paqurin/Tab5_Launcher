@@ -19,3 +19,12 @@ You can select and load firmwares from the SD card (must be formatted in FAT32) 
 ### 已知的问题
  - 有时烧录固件时，LVGL会出错导致进度条（界面）停止重绘，但是固件烧录进程依然会正常工作。
  - 文件管理器目前无法正常工作，因为默认路径不对。
+
+## How to build
+You can build using ESP-IDF, simply navigate to the project root and run `idf.py build`.
+You should use the ESP-IDF shell in order to run idf.py commands.
+Also, you can use your VS Code with the ESP-IDF Extension, simply open the project root directory in VS Code and the extension should automatically kick in.
+## 如何编译
+你可以使用ESP-IDF编译本项目。在项目根目录下执行`idf.py build`即可。
+为了使用idf.py指令，你需要使用ESP-IDF的PowerShell或者CMD。
+你也可以使用VS Code的ESP-IDF插件。用VS Code打开本项目根目录，插件会自动帮你配置，只需在VS Code中执行指令即可。
