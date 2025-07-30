@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_system.h"
+#include "esp_sleep.h"
 
 static const char *TAG = "FIRMWARE_BOOT";
 static const char *NVS_NAMESPACE = "launcher";
@@ -101,7 +102,8 @@ esp_err_t firmware_loader_boot_firmware_once(void) {
     hal_touchpad_deinit();
     
     ESP_LOGI(TAG, "Restarting to boot firmware once...");
-    esp_restart();
+    esp_sleep_enable_timer_wakeup(50000); // 50,000us = 50ms
+    esp_deep_sleep_start();
     return ESP_OK;
 }
 

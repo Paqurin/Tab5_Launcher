@@ -64,54 +64,7 @@ void hal_touchpad_init(void)
 
 void hal_touchpad_deinit(void)
 {
-    ESP_LOGI("HAL", "=== GT911 POWER-OFF DE-INITIALIZATION ===");
-    
-    // Step 1: Put touch controller to sleep if handle is available
-    if (_lcd_touch_handle != NULL) {
-        ESP_LOGI("HAL", "Step 1: Putting GT911 touch controller to sleep...");
-        esp_err_t ret = esp_lcd_touch_enter_sleep(_lcd_touch_handle);
-        if (ret == ESP_OK) {
-            ESP_LOGI("HAL", "✓ GT911 entered sleep mode successfully");
-        } else {
-            ESP_LOGW("HAL", "⚠ Failed to put GT911 to sleep: %s", esp_err_to_name(ret));
-        }
-        
-        // Allow time for sleep command to be processed
-        vTaskDelay(pdMS_TO_TICKS(100));
-        
-        // Step 2: Delete the touch handle to free resources
-        ESP_LOGI("HAL", "Step 2: Deleting touch handle...");
-        ret = esp_lcd_touch_del(_lcd_touch_handle);
-        if (ret == ESP_OK) {
-            ESP_LOGI("HAL", "✓ Touch handle deleted successfully");
-            _lcd_touch_handle = NULL;
-        } else {
-            ESP_LOGW("HAL", "⚠ Failed to delete touch handle: %s", esp_err_to_name(ret));
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(100));
-    } else {
-        ESP_LOGW("HAL", "Touch handle is NULL, skipping controller sleep/delete");
-    }
-    
-    // Step 3: Reset interrupt GPIO to prevent spurious signals
-    ESP_LOGI("HAL", "Step 3: Resetting touch interrupt GPIO 23...");
-    gpio_reset_pin(GPIO_NUM_23);
-    gpio_set_direction(GPIO_NUM_23, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(GPIO_NUM_23, GPIO_FLOATING);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    
-    // Step 4: POWER OFF the GT911 completely via BSP function
-    ESP_LOGI("HAL", "Step 4: POWERING OFF GT911 via BSP touchpad power control...");
-    bsp_set_touchpad_power_en(false);
-    ESP_LOGI("HAL", "✓ GT911 powered OFF successfully via BSP!");
-    ESP_LOGI("HAL", "✓ GT911 will be in powered-off state for firmware boot");
-    
-    // Step 5: Hold power off state for sufficient time
-    ESP_LOGI("HAL", "Step 5: Holding GT911 in powered-off state...");
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    ESP_LOGI("HAL", "✓ GT911 de-initialization complete!");
-    ESP_LOGI("HAL", "✓ GT911 is now POWERED OFF and ready for firmware initialization!");
-    ESP_LOGI("HAL", "================================================");
+    // I think simply resetting the touch chip without initializing it again 
+    // would leave init to the user FW which shall fix the problem
+    bsp_reset_tp();
 }
