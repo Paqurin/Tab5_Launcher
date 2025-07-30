@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #define MAX_FIRMWARE_NAME_LEN 64
-#define MAX_FIRMWARE_PATH_LEN 128
+#define MAX_FIRMWARE_PATH_LEN 256
 
 typedef struct {
     char filename[MAX_FIRMWARE_NAME_LEN];
@@ -27,6 +27,12 @@ typedef void (*firmware_progress_callback_t)(size_t bytes_written, size_t total_
  * @return ESP_OK on success
  */
 esp_err_t firmware_loader_init(void);
+
+/**
+ * @brief Initialize boot manager and NVS
+ * @return ESP_OK on success
+ */
+esp_err_t firmware_loader_init_boot_manager(void);
 
 /**
  * @brief Flash firmware from SD card

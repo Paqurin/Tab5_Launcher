@@ -55,9 +55,15 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to initialize SD card");
     }
     
-    // Initialize firmware loader
+    // Initialize firmware loader and boot manager
     ESP_LOGI(TAG, "Initializing firmware loader...");
     firmware_loader_init();
+    
+    ESP_LOGI(TAG, "Initializing boot manager...");
+    esp_err_t ret = firmware_loader_init_boot_manager();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize boot manager: %s", esp_err_to_name(ret));
+    }
     
     // Initialize GUI
     ESP_LOGI(TAG, "Initializing GUI...");
