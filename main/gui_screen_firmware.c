@@ -18,14 +18,22 @@ void create_firmware_loader_screen(void) {
     firmware_loader_screen = lv_obj_create(NULL);
     lv_obj_add_style(firmware_loader_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
+    // Create a container for the left half of the screen
+    lv_obj_t *left_container = lv_obj_create(firmware_loader_screen);
+    lv_obj_set_size(left_container, lv_pct(50), lv_pct(100));
+    lv_obj_align(left_container, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(left_container, 10, 0);
+    
     // Title
-    lv_obj_t *title = lv_label_create(firmware_loader_screen);
+    lv_obj_t *title = lv_label_create(left_container);
     lv_label_set_text(title, "Firmware Loader");
     apply_title_style(title);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
     
     // Back button
-    lv_obj_t *back_btn = lv_button_create(firmware_loader_screen);
+    lv_obj_t *back_btn = lv_button_create(left_container);
     lv_obj_set_size(back_btn, 100, 50);
     lv_obj_align(back_btn, LV_ALIGN_TOP_RIGHT, -10, 35);
     apply_button_style(back_btn);
@@ -36,14 +44,14 @@ void create_firmware_loader_screen(void) {
     lv_obj_center(back_label);
     
     // Native LVGL list for firmware files
-    firmware_list = lv_list_create(firmware_loader_screen);
+    firmware_list = lv_list_create(left_container);
     lv_obj_set_size(firmware_list, lv_pct(95), lv_pct(60));
     lv_obj_align(firmware_list, LV_ALIGN_TOP_MID, 0, 90);
     apply_list_style(firmware_list);
     
     // Flash button
-    flash_btn = lv_button_create(firmware_loader_screen);
-    lv_obj_set_size(flash_btn, 180, 60);
+    flash_btn = lv_button_create(left_container);
+    lv_obj_set_size(flash_btn, lv_pct(80), 60);
     lv_obj_align(flash_btn, LV_ALIGN_BOTTOM_MID, 0, -70);
     apply_button_style(flash_btn);
     lv_obj_add_flag(flash_btn, LV_OBJ_FLAG_HIDDEN);
@@ -54,7 +62,7 @@ void create_firmware_loader_screen(void) {
     lv_obj_center(flash_label);
     
     // Status label
-    status_label = lv_label_create(firmware_loader_screen);
+    status_label = lv_label_create(left_container);
     lv_label_set_text(status_label, "Select a firmware file to flash");
     lv_obj_set_style_text_color(status_label, THEME_WARNING_COLOR, 0);
     lv_obj_set_style_text_font(status_label, THEME_FONT_NORMAL, 0);

@@ -17,7 +17,7 @@ void main_menu_event_handler(lv_event_t *e) {
         
         switch (menu_id) {
             case 0: // File Manager
-                strcpy(current_directory, "/sdcard");
+                strcpy(current_directory, "/");  // Changed from "/sdcard" to "/"
                 update_file_list();
                 lv_screen_load(file_manager_screen);
                 break;
@@ -51,10 +51,9 @@ void file_list_event_handler(lv_event_t *e) {
                 
                 // Check if the combined path would fit
                 if (dir_len + name_len + 2 < sizeof(temp_path)) {
-                    if (strcmp(current_directory, "/sdcard") == 0) {
-                        // SD card root case: "/sdcard/<dirname>"
+                    if (strcmp(current_directory, "/") == 0) {  // Changed from "/sdcard" to "/"
+                        // SD card root case: "/<dirname>"
                         strcpy(temp_path, current_directory);
-                        strcat(temp_path, "/");
                         strcat(temp_path, current_entries[index].name);
                     } else {
                         // Non-root directory case: "<directory>/<dirname>"
@@ -74,6 +73,38 @@ void file_list_event_handler(lv_event_t *e) {
                     ESP_LOGW(TAG, "Directory path would be too long");
                 }
             }
+        }
+    }
+}
+
+void back_button_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int screen_id = (int)(uintptr_t)lv_event_get_user_data(e);
+        
+        if (screen_id == 0) { // Reboot dialog back button
+            lv_screen_load(main_screen);
+        } else if (screen_id == 1) { // File manager back button
+            if (strcmp(current_directory, "/") != 0) {  // Changed from "/sdcard" to "/"
+                // Go up one directory
+                char *last_slash = strrchr(current_directory, '/');
+                if (last_slash != NULL && last_slash != current_directory) {
+                    *last_slash = '\0';
+                    // If we end up with just "/", that's fine
+                    if (strlen(current_directory) == 0) {
+                        strcpy(current_directory, "/");  // Changed from "/sdcard" to "/"
+                    }
+                    update_file_list();
+                } else {
+                    // Already at SD card root, go back to main screen
+                    lv_screen_load(main_screen);
+                }
+            } else {
+                // At SD card root, go back to main screen
+                lv_screen_load(main_screen);
+            }
+        } else if (screen_id == 2) { // Firmware loader back button
+            lv_screen_load(main_screen);
         }
     }
 }
@@ -148,38 +179,6 @@ void splash_button_event_handler(lv_event_t *e) {
         } else {
             // Stay in launcher
             ESP_LOGI(TAG, "User selected to stay in launcher");
-            lv_screen_load(main_screen);
-        }
-    }
-}
-
-void back_button_event_handler(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED) {
-        int screen_id = (int)(uintptr_t)lv_event_get_user_data(e);
-        
-        if (screen_id == 0) { // Reboot dialog back button
-            lv_screen_load(main_screen);
-        } else if (screen_id == 1) { // File manager back button
-            if (strcmp(current_directory, "/sdcard") != 0) {
-                // Go up one directory
-                char *last_slash = strrchr(current_directory, '/');
-                if (last_slash != NULL && last_slash != current_directory) {
-                    *last_slash = '\0';
-                    // If we end up with just "/sdcard", that's fine
-                    if (strlen(current_directory) == 0) {
-                        strcpy(current_directory, "/sdcard");
-                    }
-                    update_file_list();
-                } else {
-                    // Already at SD card root, go back to main screen
-                    lv_screen_load(main_screen);
-                }
-            } else {
-                // At SD card root, go back to main screen
-                lv_screen_load(main_screen);
-            }
-        } else if (screen_id == 2) { // Firmware loader back button
             lv_screen_load(main_screen);
         }
     }

@@ -1,7 +1,7 @@
 #include "gui_state.h"
 
 // State variables
-char current_directory[512] = "/sdcard";
+char current_directory[512] = "/";
 file_entry_t current_entries[32];
 int current_entry_count = 0;
 firmware_info_t firmware_files[16];

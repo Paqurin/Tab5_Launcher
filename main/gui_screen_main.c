@@ -13,14 +13,22 @@ void create_main_screen(void) {
     main_screen = lv_obj_create(NULL);
     lv_obj_add_style(main_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
+    // Create a container for the left half of the screen
+    lv_obj_t *left_container = lv_obj_create(main_screen);
+    lv_obj_set_size(left_container, lv_pct(50), lv_pct(100));
+    lv_obj_align(left_container, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(left_container, 10, 0);
+    
     // Title
-    lv_obj_t *title = lv_label_create(main_screen);
+    lv_obj_t *title = lv_label_create(left_container);
     lv_label_set_text(title, "Simplified Launcher");
     apply_title_style(title);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 20);
     
     // SD Card status
-    lv_obj_t *sd_status = lv_label_create(main_screen);
+    lv_obj_t *sd_status = lv_label_create(left_container);
     if (sd_manager_is_mounted()) {
         lv_label_set_text(sd_status, LV_SYMBOL_SD_CARD " SD Card: Mounted");
         lv_obj_set_style_text_color(sd_status, THEME_SUCCESS_COLOR, 0);
@@ -32,8 +40,8 @@ void create_main_screen(void) {
     lv_obj_align(sd_status, LV_ALIGN_TOP_MID, 0, 70);
     
     // File Manager button
-    lv_obj_t *file_mgr_btn = lv_button_create(main_screen);
-    lv_obj_set_size(file_mgr_btn, 250, 70);
+    lv_obj_t *file_mgr_btn = lv_button_create(left_container);
+    lv_obj_set_size(file_mgr_btn, lv_pct(90), 70);
     lv_obj_align(file_mgr_btn, LV_ALIGN_CENTER, 0, -70);
     apply_button_style(file_mgr_btn);
     lv_obj_add_event_cb(file_mgr_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)0);
@@ -43,8 +51,8 @@ void create_main_screen(void) {
     lv_obj_center(file_mgr_label);
     
     // Firmware Loader button
-    lv_obj_t *fw_loader_btn = lv_button_create(main_screen);
-    lv_obj_set_size(fw_loader_btn, 250, 70);
+    lv_obj_t *fw_loader_btn = lv_button_create(left_container);
+    lv_obj_set_size(fw_loader_btn, lv_pct(90), 70);
     lv_obj_align(fw_loader_btn, LV_ALIGN_CENTER, 0, 10);
     apply_button_style(fw_loader_btn);
     lv_obj_add_event_cb(fw_loader_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)1);
@@ -54,8 +62,8 @@ void create_main_screen(void) {
     lv_obj_center(fw_loader_label);
     
     // Run Firmware button
-    lv_obj_t *run_fw_btn = lv_button_create(main_screen);
-    lv_obj_set_size(run_fw_btn, 250, 70);
+    lv_obj_t *run_fw_btn = lv_button_create(left_container);
+    lv_obj_set_size(run_fw_btn, lv_pct(90), 70);
     lv_obj_align(run_fw_btn, LV_ALIGN_CENTER, 0, 90);
     apply_button_style(run_fw_btn);
     lv_obj_add_event_cb(run_fw_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)2);

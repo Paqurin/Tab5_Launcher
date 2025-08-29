@@ -1,4 +1,4 @@
-idf_component_register(SRCS "gui_state.c" 
+idf_component_register(SRCS "gui_screen_reboot.c" "gui_state.c" 
                             "gui_progress.c" 
                             "gui_events.c" 
                             "gui_screens.c"

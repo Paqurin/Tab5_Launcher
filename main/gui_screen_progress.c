@@ -13,15 +13,23 @@ void create_progress_screen(void) {
     progress_screen = lv_obj_create(NULL);
     lv_obj_add_style(progress_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
+    // Create a container for the left half of the screen
+    lv_obj_t *left_container = lv_obj_create(progress_screen);
+    lv_obj_set_size(left_container, lv_pct(50), lv_pct(100));
+    lv_obj_align(left_container, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(left_container, 10, 0);
+    
     // Title
-    lv_obj_t *title = lv_label_create(progress_screen);
+    lv_obj_t *title = lv_label_create(left_container);
     lv_label_set_text(title, "Flashing Firmware");
     apply_title_style(title);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
     
     // Progress bar
-    progress_bar = lv_bar_create(progress_screen);
-    lv_obj_set_size(progress_bar, lv_pct(80), 40);
+    progress_bar = lv_bar_create(left_container);
+    lv_obj_set_size(progress_bar, lv_pct(90), 40);
     lv_obj_align(progress_bar, LV_ALIGN_CENTER, 0, 0);
     lv_bar_set_range(progress_bar, 0, 100);
     
@@ -33,13 +41,13 @@ void create_progress_screen(void) {
     lv_obj_set_style_bg_opa(progress_bar, LV_OPA_COVER, LV_PART_INDICATOR);
     
     // Progress label
-    progress_label = lv_label_create(progress_screen);
+    progress_label = lv_label_create(left_container);
     lv_label_set_text(progress_label, "0 / 0 bytes (0%)");
     apply_text_style(progress_label);
     lv_obj_align(progress_label, LV_ALIGN_CENTER, 0, 50);
     
     // Step description
-    progress_step_label = lv_label_create(progress_screen);
+    progress_step_label = lv_label_create(left_container);
     lv_label_set_text(progress_step_label, "Preparing...");
     lv_obj_set_style_text_color(progress_step_label, THEME_SUCCESS_COLOR, 0);
     lv_obj_set_style_text_font(progress_step_label, THEME_FONT_NORMAL, 0);

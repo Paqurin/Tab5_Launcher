@@ -46,9 +46,26 @@ void hal_init(void)
     i2c_master_bus_handle_t i2c_bus_handle = bsp_i2c_get_handle();
     bsp_io_expander_pi4ioe_init(i2c_bus_handle);
 
-    // Initialize display and touch
+    // Initialize display and touch with PSRAM buffers
     bsp_reset_tp();
-    lvDisp = bsp_display_start();
+    
+    // Configure display to use PSRAM for buffers
+    bsp_display_cfg_t cfg = {
+        .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
+        .buffer_size   = BSP_LCD_DRAW_BUFF_SIZE,
+        .double_buffer = BSP_LCD_DRAW_BUFF_DOUBLE,
+        .flags         = {
+#if CONFIG_BSP_LCD_COLOR_FORMAT_RGB888
+            .buff_dma = false,
+#else
+            .buff_dma = true,
+#endif
+            .buff_spiram = true,  // Enable PSRAM for buffers
+            .sw_rotate   = true,
+        }
+    };
+    
+    lvDisp = bsp_display_start_with_config(&cfg);
     lv_display_set_rotation(lvDisp, LV_DISPLAY_ROTATION_90);
     bsp_display_backlight_on();
 }
@@ -68,3 +85,1995 @@ void hal_touchpad_init(void)
 //     // would leave init to the user FW which shall fix the problem
 //     bsp_reset_tp();
 // }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the touch chip without initializing it again 
+//     // would leave init to the user FW which shall fix the problem
+//     bsp_reset_tp();
+// }
+
+// void hal_touchpad_deinit(void) not needed anymore
+// {
+//     // I think simply resetting the
