@@ -1,4 +1,4 @@
-# Tab5-Launcher
+# Tab5-Launcher- works so far! adding features
 
 ## English
 A port of the M5Launcher (sort of) for the Tab5, with LVGL GUI.
