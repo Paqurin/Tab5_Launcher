@@ -1,0 +1,132 @@
+[
+  {
+    "content": "Create Archon project structure and sprint tasks",
+    "status": "completed",
+    "activeForm": "Creating Archon project structure and sprint tasks"
+  },
+  {
+    "content": "Research missing HAL implementations using Ref MCP",
+    "status": "completed",
+    "activeForm": "Researching missing HAL implementations using Ref MCP"
+  },
+  {
+    "content": "Research missing service implementations",
+    "status": "completed",
+    "activeForm": "Researching missing service implementations"
+  },
+  {
+    "content": "Implement Microphone Service",
+    "status": "completed",
+    "activeForm": "Implementing Microphone Service"
+  },
+  {
+    "content": "Network Diagnostics Service",
+    "status": "completed",
+    "activeForm": "Implementing Network Diagnostics Service"
+  },
+  {
+    "content": "Implement Network Selector Service",
+    "status": "completed",
+    "activeForm": "Implementing Network Selector Service"
+  },
+  {
+    "content": "Implement Ollama API Service",
+    "status": "completed",
+    "activeForm": "Implementing Ollama API Service"
+  },
+  {
+    "content": "Implement Reticulum Service",
+    "status": "completed",
+    "activeForm": "Implementing Reticulum Service"
+  },
+  {
+    "content": "Implement USB Device Manager Service",
+    "status": "completed",
+    "activeForm": "Implementing USB Device Manager Service"
+  },
+  {
+    "content": "Test Sprint 2 services implementations",
+    "status": "completed",
+    "activeForm": "Testing Sprint 2 services implementations"
+  },
+  {
+    "content": "Research missing application implementations",
+    "status": "completed",
+    "activeForm": "Researching missing application implementations"
+  },
+  {
+    "content": "Implement LLaMA Pixel App (Tier 1 Critical)",
+    "status": "completed",
+    "activeForm": "Implementing LLaMA Pixel App"
+  },
+  {
+    "content": "Implement Accessibility Demo App (Tier 1 Critical)",
+    "status": "completed",
+    "activeForm": "Implementing Accessibility Demo App"
+  },
+  {
+    "content": "Implement Comprehensive Radio App (Tier 2)",
+    "status": "completed",
+    "activeForm": "Implementing Comprehensive Radio App"
+  },
+  {
+    "content": "Implement ML Showcase App (Tier 2)",
+    "status": "completed",
+    "activeForm": "Implementing ML Showcase App"
+  },
+  {
+    "content": "Implement USB Device Test App (Tier 3)",
+    "status": "completed",
+    "activeForm": "Implementing USB Device Test App"
+  },
+  {
+    "content": "Test and validate all implementations",
+    "status": "completed",
+    "activeForm": "Testing and validating all implementations"
+  },
+  {
+    "content": "Research Sprint 4 requirements",
+    "status": "completed",
+    "activeForm": "Researching Sprint 4 requirements"
+  },
+  {
+    "content": "Register all applications in app_integration",
+    "status": "completed",
+    "activeForm": "Registering all applications in app_integration"
+  },
+  {
+    "content": "Fix PlatformIO Arduino board definitions",
+    "status": "completed",
+    "activeForm": "Fixing PlatformIO Arduino board definitions"
+  },
+  {
+    "content": "Register all services in service_manager",
+    "status": "in_progress",
+    "activeForm": "Registering all services in service_manager"
+  },
+  {
+    "content": "Integrate AudioHAL into HAL Manager",
+    "status": "pending",
+    "activeForm": "Integrating AudioHAL into HAL Manager"
+  },
+  {
+    "content": "Create main launcher application",
+    "status": "pending",
+    "activeForm": "Creating main launcher application"
+  },
+  {
+    "content": "Implement system settings UI",
+    "status": "pending",
+    "activeForm": "Implementing system settings UI"
+  },
+  {
+    "content": "Complete system integration",
+    "status": "pending",
+    "activeForm": "Completing system integration"
+  },
+  {
+    "content": "Performance benchmarking and optimization",
+    "status": "pending",
+    "activeForm": "Performance benchmarking and optimization"
+  }
+]
