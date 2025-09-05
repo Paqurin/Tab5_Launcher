@@ -4,6 +4,8 @@
 #include "sd_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static const char *TAG = "GUI_MAIN";
 
@@ -225,15 +227,19 @@ void update_status_bar(float voltage, float current_ma, bool charging) {
         }
         
         // Check for removal when card is detected but not mounted (white state)
-        if (card_detected && !card_mounted) {
-            // Try a quick mount to see if card is still physically present
+        // Only check every 10 seconds to avoid system instability
+        static uint32_t last_removal_check = 0;
+        uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        
+        if (card_detected && !card_mounted && (current_time - last_removal_check >= 10000)) {
+            last_removal_check = current_time;
+            
+            // Try a very quick mount test to see if card is still physically present
             esp_err_t mount_result = sd_manager_mount();
             if (mount_result == ESP_OK) {
-                // Card is still there and now mounted
-                card_mounted = true;
-                // Immediately unmount it since user had it unmounted
+                // Card is still there, immediately unmount since user had it unmounted
                 sd_manager_unmount();
-                card_mounted = false;
+                // Keep detected state as true
             } else {
                 // Card was removed - set to not present
                 sd_manager_set_card_present(false);
