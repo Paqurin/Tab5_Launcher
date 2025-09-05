@@ -132,10 +132,10 @@ void create_main_screen(void) {
     lv_obj_set_style_text_font(sd_status, THEME_FONT_NORMAL, 0);
     lv_obj_align(sd_status, LV_ALIGN_TOP_MID, 0, 70);
     
-    // File Manager button
+    // File Manager button - Bigger size
     lv_obj_t *file_mgr_btn = lv_button_create(center_container);
-    lv_obj_set_size(file_mgr_btn, lv_pct(90), 70);
-    lv_obj_align(file_mgr_btn, LV_ALIGN_CENTER, 0, -70);
+    lv_obj_set_size(file_mgr_btn, lv_pct(95), 85);
+    lv_obj_align(file_mgr_btn, LV_ALIGN_CENTER, 0, -80);
     apply_button_style(file_mgr_btn);
     lv_obj_add_event_cb(file_mgr_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)0);
     
@@ -143,10 +143,10 @@ void create_main_screen(void) {
     lv_label_set_text(file_mgr_label, LV_SYMBOL_DIRECTORY " File Manager");
     lv_obj_center(file_mgr_label);
     
-    // Firmware Loader button
+    // Firmware Loader button - Bigger size
     lv_obj_t *fw_loader_btn = lv_button_create(center_container);
-    lv_obj_set_size(fw_loader_btn, lv_pct(90), 70);
-    lv_obj_align(fw_loader_btn, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_set_size(fw_loader_btn, lv_pct(95), 85);
+    lv_obj_align(fw_loader_btn, LV_ALIGN_CENTER, 0, 15);
     apply_button_style(fw_loader_btn);
     lv_obj_add_event_cb(fw_loader_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)1);
     
@@ -154,10 +154,10 @@ void create_main_screen(void) {
     lv_label_set_text(fw_loader_label, LV_SYMBOL_DOWNLOAD " Firmware Loader");
     lv_obj_center(fw_loader_label);
     
-    // Run Firmware button
+    // Run Firmware button - Bigger size
     lv_obj_t *run_fw_btn = lv_button_create(center_container);
-    lv_obj_set_size(run_fw_btn, lv_pct(90), 70);
-    lv_obj_align(run_fw_btn, LV_ALIGN_CENTER, 0, 90);
+    lv_obj_set_size(run_fw_btn, lv_pct(95), 85);
+    lv_obj_align(run_fw_btn, LV_ALIGN_CENTER, 0, 110);
     apply_button_style(run_fw_btn);
     lv_obj_add_event_cb(run_fw_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)2);
     
