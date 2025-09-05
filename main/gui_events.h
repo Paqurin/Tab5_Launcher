@@ -33,4 +33,14 @@ void back_button_event_handler(lv_event_t *e);
  */
 void splash_button_event_handler(lv_event_t *e);
 
+/**
+ * @brief Format SD card button event handler
+ */
+void format_button_event_handler(lv_event_t *e);
+
+/**
+ * @brief Mount/Unmount SD card button event handler
+ */
+void mount_unmount_button_event_handler(lv_event_t *e);
+
 #endif // GUI_EVENTS_H

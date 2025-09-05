@@ -2,5 +2,9 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
+# Enable printf float support for LVGL text formatting
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -u _printf_float")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -u _printf_float")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(m5stack-tab5-lvgl)

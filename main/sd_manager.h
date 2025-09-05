@@ -63,4 +63,34 @@ size_t sd_manager_get_file_size(const char *path);
  */
 FILE* sd_manager_open_file(const char *path, const char *mode);
 
+/**
+ * @brief Format SD card as FAT32
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t sd_manager_format(void);
+
+/**
+ * @brief Mount SD card (for remounting after unmount)
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t sd_manager_mount(void);
+
+/**
+ * @brief Unmount SD card (for safe removal or troubleshooting)
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t sd_manager_unmount(void);
+
+/**
+ * @brief Check if SD card hardware is detected (regardless of mount status)
+ * @return true if SD card is physically detected, false otherwise
+ */
+bool sd_manager_card_detected(void);
+
+/**
+ * @brief Set SD card presence status (for manual detection updates)
+ * @param present true if card is present, false otherwise
+ */
+void sd_manager_set_card_present(bool present);
+
 #endif // SD_MANAGER_H

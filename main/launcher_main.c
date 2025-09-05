@@ -11,10 +11,13 @@
 #include "gui_state.h"
 #include "firmware_loader.h"
 #include "gui_screens.h"
+#include "power_monitor.h"
 
 static const char *TAG = "LAUNCHER";
 static uint32_t boot_timer_start = 0;
 static const uint32_t BOOT_SCREEN_TIMEOUT_MS = 5000; // 5 seconds
+static uint32_t last_power_update = 0;
+static const uint32_t POWER_UPDATE_INTERVAL_MS = 1000; // Update every 1 second
 
 void app_main(void) {
     ESP_LOGI(TAG, "Starting Simplified Launcher");
@@ -53,6 +56,14 @@ void app_main(void) {
     ESP_LOGI(TAG, "Initializing SD card...");
     if (sd_manager_init() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize SD card");
+    }
+    
+    // Initialize power monitor
+    ESP_LOGI(TAG, "Initializing power monitor...");
+    if (power_monitor_init()) {
+        ESP_LOGI(TAG, "Power monitor initialized successfully");
+    } else {
+        ESP_LOGW(TAG, "Failed to initialize power monitor - status bar will show placeholder values");
     }
     
     // Initialize firmware loader and boot manager
@@ -104,6 +115,24 @@ void app_main(void) {
             should_show_main = false;
             update_main_screen(); // Refresh the main screen to show updated firmware status
             lv_screen_load(main_screen);
+        }
+        
+        // Update power readings periodically
+        uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        if (current_time - last_power_update >= POWER_UPDATE_INTERVAL_MS) {
+            last_power_update = current_time;
+            
+            float voltage = power_monitor_get_voltage();
+            float current_ma = power_monitor_get_current_ma();
+            bool charging = power_monitor_is_charging();
+            
+            ESP_LOGI(TAG, "Power readings: %.2fV, %.1fmA, charging: %s", voltage, current_ma, charging ? "yes" : "no");
+            
+            // Only update if we're on the main screen
+            lv_obj_t *active_screen = lv_screen_active();
+            if (active_screen == main_screen) {
+                update_status_bar(voltage, current_ma, charging);
+            }
         }
         
         gui_manager_update();

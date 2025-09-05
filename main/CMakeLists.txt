@@ -15,4 +15,5 @@ idf_component_register(SRCS "gui_screen_reboot.c" "gui_state.c"
                             "firmware_scanner.c"
                             "firmware_boot.c"
                             "gui_manager.c"
+                            "power_monitor.c"
                     INCLUDE_DIRS ".")

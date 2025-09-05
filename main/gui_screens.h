@@ -71,8 +71,8 @@ void update_firmware_list(void);
 void update_main_screen(void);
 
 /**
- * @brief Update main screen display
+ * @brief Update status bar with current voltage, current readings, and charging status
  */
-void update_main_screen(void);
+void update_status_bar(float voltage, float current_ma, bool charging);
 
 #endif // GUI_SCREENS_H
