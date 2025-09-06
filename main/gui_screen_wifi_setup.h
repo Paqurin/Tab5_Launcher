@@ -41,4 +41,10 @@ void wifi_setup_show_password_input(bool show_password);
  */
 void wifi_setup_clear_password(void);
 
+/**
+ * @brief Populate demo networks for interface testing
+ * @note Used on ESP32-P4 to demonstrate WiFi interface functionality
+ */
+void wifi_populate_demo_networks(void);
+
 #endif // GUI_SCREEN_WIFI_SETUP_H

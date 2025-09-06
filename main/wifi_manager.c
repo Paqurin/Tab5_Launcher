@@ -10,7 +10,9 @@
 #include "cJSON.h"
 #include <string.h>
 
-#ifndef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "esp_wifi_remote.h"
+#else
 #include "esp_wifi.h"
 #endif
 
@@ -23,65 +25,62 @@ static const char *TAG = "WIFI_MANAGER";
 const char* WIFI_EVENT = "WIFI_EVENT";
 
 esp_err_t esp_wifi_init(const wifi_init_config_t *config) {
-    ESP_LOGW(TAG, "esp_wifi_init: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_init: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_init(config);
 }
 
 esp_err_t esp_wifi_deinit(void) {
-    ESP_LOGW(TAG, "esp_wifi_deinit: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_deinit: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_deinit();
 }
 
 esp_err_t esp_wifi_set_mode(wifi_mode_t mode) {
-    ESP_LOGW(TAG, "esp_wifi_set_mode: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_set_mode: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_set_mode(mode);
 }
 
 esp_err_t esp_wifi_start(void) {
-    ESP_LOGW(TAG, "esp_wifi_start: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_start: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_start();
 }
 
 esp_err_t esp_wifi_stop(void) {
-    ESP_LOGW(TAG, "esp_wifi_stop: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_stop: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_stop();
 }
 
 esp_err_t esp_wifi_set_config(wifi_interface_t interface, wifi_config_t *conf) {
-    ESP_LOGW(TAG, "esp_wifi_set_config: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_set_config: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_set_config(interface, conf);
 }
 
 esp_err_t esp_wifi_connect(void) {
-    ESP_LOGW(TAG, "esp_wifi_connect: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_connect: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_connect();
 }
 
 esp_err_t esp_wifi_disconnect(void) {
-    ESP_LOGW(TAG, "esp_wifi_disconnect: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_disconnect: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_disconnect();
 }
 
 esp_err_t esp_wifi_scan_start(const wifi_scan_config_t *config, bool block) {
-    ESP_LOGW(TAG, "esp_wifi_scan_start: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_scan_start: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_scan_start(config, block);
 }
 
 esp_err_t esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records) {
-    ESP_LOGW(TAG, "esp_wifi_scan_get_ap_records: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    if (number) *number = 0;
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_scan_get_ap_records: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_scan_get_ap_records(number, ap_records);
 }
 
 esp_err_t esp_wifi_sta_get_ap_info(wifi_ap_record_t *ap_info) {
-    ESP_LOGW(TAG, "esp_wifi_sta_get_ap_info: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOGI(TAG, "esp_wifi_sta_get_ap_info: Using esp_wifi_remote for ESP32-P4");
+    return esp_wifi_remote_sta_get_ap_info(ap_info);
 }
 
-esp_netif_t* esp_netif_create_default_wifi_sta(void) {
-    ESP_LOGW(TAG, "esp_netif_create_default_wifi_sta: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return NULL;
-}
+// Note: esp_netif_create_default_wifi_sta should work normally on ESP32-P4
+// as it's a network interface function, not a WiFi-specific function
 
 #endif // CONFIG_IDF_TARGET_ESP32P4
 
@@ -148,7 +147,12 @@ esp_err_t wifi_manager_init(wifi_status_callback_t status_callback) {
     }
     
     // Register event handlers
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    ESP_LOGI(TAG, "Registering WIFI_REMOTE_EVENT handlers for ESP32-P4");
+    ret = esp_event_handler_register(WIFI_REMOTE_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
+#else
     ret = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
+#endif
     if (ret == ESP_OK) {
         ret = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL);
     }

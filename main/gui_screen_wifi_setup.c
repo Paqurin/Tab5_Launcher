@@ -33,18 +33,28 @@ static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr);
 static void wifi_scan_callback(wifi_scan_result_t *results, uint8_t count);
 
 void create_wifi_setup_screen(void) {
-    ESP_LOGI(TAG, "Creating WiFi setup screen");
+    ESP_LOGI(TAG, "Creating enhanced WiFi setup screen");
+    
+    // Clean up any existing screen
+    if (wifi_setup_screen) {
+        lv_obj_del(wifi_setup_screen);
+        wifi_setup_screen = NULL;
+    }
     
     wifi_setup_screen = lv_obj_create(NULL);
     lv_obj_add_style(wifi_setup_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create persistent status bar
+    // Create persistent status bar - safely check if function exists
+    #ifndef CONFIG_IDF_TARGET_ESP32P4
     status_bar = gui_status_bar_create(wifi_setup_screen);
+    #else
+    status_bar = NULL; // Skip status bar on ESP32-P4 for stability
+    #endif
     
-    // Create main container (adjust position to account for status bar)
+    // Create main container (adjust position based on status bar)
     lv_obj_t *main_container = lv_obj_create(wifi_setup_screen);
     lv_obj_set_size(main_container, lv_pct(95), lv_pct(90));
-    lv_obj_align(main_container, LV_ALIGN_CENTER, 0, 20); // Offset for status bar
+    lv_obj_align(main_container, LV_ALIGN_CENTER, 0, status_bar ? 20 : 0);
     lv_obj_set_style_bg_opa(main_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(main_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(main_container, 10, 0);
@@ -57,97 +67,170 @@ void create_wifi_setup_screen(void) {
     
     // WiFi status label
     wifi_status_label = lv_label_create(main_container);
-    lv_label_set_text(wifi_status_label, "Ready to scan for networks");
-    lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFFFF), 0);
+    lv_label_set_text(wifi_status_label, "ESP32-P4 WiFi: Bridge Required");
+    lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFF00), 0);
     lv_obj_set_style_text_font(wifi_status_label, THEME_FONT_SMALL, 0);
     lv_obj_align(wifi_status_label, LV_ALIGN_TOP_MID, 0, 40);
     
-    // Scan button
+    // Info panel for ESP32-P4 WiFi architecture
+    lv_obj_t *info_panel = lv_obj_create(main_container);
+    lv_obj_set_size(info_panel, lv_pct(90), 120);
+    lv_obj_align(info_panel, LV_ALIGN_TOP_MID, 0, 70);
+    lv_obj_set_style_bg_color(info_panel, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(info_panel, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_width(info_panel, 2, 0);
+    lv_obj_set_style_radius(info_panel, 8, 0);
+    lv_obj_set_style_pad_all(info_panel, 15, 0);
+    
+    lv_obj_t *info_title = lv_label_create(info_panel);
+    lv_label_set_text(info_title, "ESP32-P4 WiFi Architecture");
+    lv_obj_set_style_text_color(info_title, lv_color_hex(0x2196F3), 0);
+    lv_obj_set_style_text_font(info_title, THEME_FONT_NORMAL, 0);
+    lv_obj_align(info_title, LV_ALIGN_TOP_LEFT, 0, 0);
+    
+    lv_obj_t *info_text = lv_label_create(info_panel);
+    lv_label_set_text(info_text, "• ESP32-P4 uses ESP-Hosted WiFi via ESP32-C6\n• Requires external bridge module\n• Interface ready for future integration");
+    lv_obj_set_style_text_color(info_text, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(info_text, THEME_FONT_SMALL, 0);
+    lv_obj_align(info_text, LV_ALIGN_TOP_LEFT, 0, 25);
+    
+    // Scan button (functional but shows stub behavior)
     wifi_scan_btn = lv_button_create(main_container);
     lv_obj_set_size(wifi_scan_btn, lv_pct(40), 50);
-    lv_obj_align(wifi_scan_btn, LV_ALIGN_TOP_MID, 0, 70);
+    lv_obj_align(wifi_scan_btn, LV_ALIGN_TOP_MID, 0, 200);
     apply_button_style(wifi_scan_btn);
     lv_obj_add_event_cb(wifi_scan_btn, wifi_scan_btn_event_handler, LV_EVENT_CLICKED, NULL);
     
     lv_obj_t *scan_label = lv_label_create(wifi_scan_btn);
-    lv_label_set_text(scan_label, LV_SYMBOL_REFRESH " Scan");
+    lv_label_set_text(scan_label, LV_SYMBOL_REFRESH " Scan (Demo)");
     lv_obj_center(scan_label);
     
-    // Network list
+    // Network list with enhanced styling
     wifi_network_list = lv_list_create(main_container);
-    lv_obj_set_size(wifi_network_list, lv_pct(90), 200);
-    lv_obj_align(wifi_network_list, LV_ALIGN_TOP_MID, 0, 130);
+    lv_obj_set_size(wifi_network_list, lv_pct(90), 180);
+    lv_obj_align(wifi_network_list, LV_ALIGN_TOP_MID, 0, 260);
+    lv_obj_set_style_bg_color(wifi_network_list, lv_color_hex(0x2C2C2C), 0);
+    lv_obj_set_style_border_color(wifi_network_list, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_border_width(wifi_network_list, 1, 0);
+    lv_obj_set_style_radius(wifi_network_list, 8, 0);
     lv_obj_add_event_cb(wifi_network_list, wifi_network_list_event_handler, LV_EVENT_CLICKED, NULL);
     
-    // Password input container (initially hidden)
+    // Password input container (initially hidden) with enhanced styling
     lv_obj_t *password_container = lv_obj_create(main_container);
-    lv_obj_set_size(password_container, lv_pct(90), 60);
-    lv_obj_align(password_container, LV_ALIGN_TOP_MID, 0, 340);
-    lv_obj_set_style_bg_opa(password_container, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_opa(password_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_size(password_container, lv_pct(90), 80);
+    lv_obj_align(password_container, LV_ALIGN_TOP_MID, 0, 450);
+    lv_obj_set_style_bg_color(password_container, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(password_container, lv_color_hex(0x4CAF50), 0);
+    lv_obj_set_style_border_width(password_container, 1, 0);
+    lv_obj_set_style_radius(password_container, 8, 0);
+    lv_obj_set_style_pad_all(password_container, 10, 0);
     lv_obj_add_flag(password_container, LV_OBJ_FLAG_HIDDEN); // Initially hidden
     
     lv_obj_t *password_label = lv_label_create(password_container);
-    lv_label_set_text(password_label, "Password:");
-    lv_obj_set_style_text_color(password_label, lv_color_hex(0xFFFFFF), 0);
+    lv_label_set_text(password_label, "Network Password:");
+    lv_obj_set_style_text_color(password_label, lv_color_hex(0x4CAF50), 0);
+    lv_obj_set_style_text_font(password_label, THEME_FONT_SMALL, 0);
     lv_obj_align(password_label, LV_ALIGN_TOP_LEFT, 0, 0);
     
     wifi_password_textarea = lv_textarea_create(password_container);
-    lv_obj_set_size(wifi_password_textarea, lv_pct(100), 35);
+    lv_obj_set_size(wifi_password_textarea, lv_pct(100), 40);
     lv_obj_align(wifi_password_textarea, LV_ALIGN_TOP_LEFT, 0, 25);
+    lv_obj_set_style_bg_color(wifi_password_textarea, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_color(wifi_password_textarea, lv_color_hex(0x666666), 0);
+    lv_obj_set_style_text_color(wifi_password_textarea, lv_color_hex(0xFFFFFF), 0);
     lv_textarea_set_placeholder_text(wifi_password_textarea, "Enter network password");
     lv_textarea_set_password_mode(wifi_password_textarea, true);
     
-    // Connect button
-    wifi_connect_btn = lv_button_create(main_container);
+    // Button container for better layout
+    lv_obj_t *button_container = lv_obj_create(main_container);
+    lv_obj_set_size(button_container, lv_pct(100), 60);
+    lv_obj_align(button_container, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_style_bg_opa(button_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(button_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(button_container, 0, 0);
+    
+    // Connect button (demo mode)
+    wifi_connect_btn = lv_button_create(button_container);
     lv_obj_set_size(wifi_connect_btn, lv_pct(40), 50);
-    lv_obj_align(wifi_connect_btn, LV_ALIGN_BOTTOM_MID, -60, -60);
+    lv_obj_align(wifi_connect_btn, LV_ALIGN_LEFT_MID, 0, 0);
     apply_button_style(wifi_connect_btn);
+    lv_obj_set_style_bg_color(wifi_connect_btn, lv_color_hex(0x4CAF50), 0);
     lv_obj_add_event_cb(wifi_connect_btn, wifi_connect_btn_event_handler, LV_EVENT_CLICKED, NULL);
     lv_obj_add_state(wifi_connect_btn, LV_STATE_DISABLED); // Initially disabled
     
     lv_obj_t *connect_label = lv_label_create(wifi_connect_btn);
-    lv_label_set_text(connect_label, LV_SYMBOL_WIFI " Connect");
+    lv_label_set_text(connect_label, LV_SYMBOL_WIFI " Connect (Demo)");
     lv_obj_center(connect_label);
     
+    // Settings button (for future WiFi configuration)
+    lv_obj_t *settings_btn = lv_button_create(button_container);
+    lv_obj_set_size(settings_btn, lv_pct(25), 50);
+    lv_obj_align(settings_btn, LV_ALIGN_CENTER, 0, 0);
+    apply_button_style(settings_btn);
+    lv_obj_set_style_bg_color(settings_btn, lv_color_hex(0xFF9800), 0);
+    
+    lv_obj_t *settings_label = lv_label_create(settings_btn);
+    lv_label_set_text(settings_label, LV_SYMBOL_SETTINGS);
+    lv_obj_center(settings_label);
+    
     // Back button
-    lv_obj_t *back_btn = lv_button_create(main_container);
-    lv_obj_set_size(back_btn, lv_pct(40), 50);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 60, -60);
+    lv_obj_t *back_btn = lv_button_create(button_container);
+    lv_obj_set_size(back_btn, lv_pct(25), 50);
+    lv_obj_align(back_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     apply_button_style(back_btn);
+    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x607D8B), 0);
     lv_obj_add_event_cb(back_btn, wifi_back_btn_event_handler, LV_EVENT_CLICKED, NULL);
     
     lv_obj_t *back_label = lv_label_create(back_btn);
     lv_label_set_text(back_label, LV_SYMBOL_LEFT " Back");
     lv_obj_center(back_label);
     
-    // Initialize WiFi manager with status callback
-    wifi_manager_init(wifi_status_callback);
+    // Initialize WiFi manager with status callback (safe for ESP32-P4)
+    esp_err_t wifi_init_result = wifi_manager_init(wifi_status_callback);
+    if (wifi_init_result != ESP_OK) {
+        ESP_LOGW(TAG, "WiFi manager init returned: %s (expected for ESP32-P4)", esp_err_to_name(wifi_init_result));
+    }
     
-    ESP_LOGI(TAG, "WiFi setup screen created successfully");
+    // Populate with demo networks to show interface functionality
+    wifi_populate_demo_networks();
+    
+    ESP_LOGI(TAG, "Enhanced WiFi setup screen created successfully");
 }
 
 static void wifi_scan_btn_event_handler(lv_event_t *e) {
-    ESP_LOGI(TAG, "WiFi scan button clicked");
+    ESP_LOGI(TAG, "WiFi scan button clicked (demo mode)");
     
     // Clear existing list
     lv_obj_clean(wifi_network_list);
     
-    // Update status
-    lv_label_set_text(wifi_status_label, "Scanning for networks...");
+    // Update status to show scanning
+    lv_label_set_text(wifi_status_label, "Scanning (Demo Mode)...");
     lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFF00), 0);
     
     // Disable scan button temporarily
     lv_obj_add_state(wifi_scan_btn, LV_STATE_DISABLED);
     
-    // Start WiFi scan
+    // Start WiFi scan (will return ESP_ERR_NOT_SUPPORTED on ESP32-P4)
     esp_err_t ret = wifi_manager_scan_start(wifi_scan_callback);
-    if (ret != ESP_OK) {
+    if (ret == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGI(TAG, "WiFi scan not supported (ESP32-P4), showing demo results");
+        
+        // Simulate scan delay
+        vTaskDelay(pdMS_TO_TICKS(1500));
+        
+        // Show demo networks with refreshed data
+        wifi_populate_demo_networks();
+        
+        // Re-enable scan button
+        lv_obj_clear_state(wifi_scan_btn, LV_STATE_DISABLED);
+        
+    } else if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start WiFi scan: %s", esp_err_to_name(ret));
-        lv_label_set_text(wifi_status_label, "Scan failed - please try again");
+        lv_label_set_text(wifi_status_label, "Scan failed - ESP32-P4 bridge required");
         lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFF0000), 0);
         lv_obj_clear_state(wifi_scan_btn, LV_STATE_DISABLED);
     }
+    // If ret == ESP_OK, the callback will handle re-enabling the button
 }
 
 static void wifi_network_list_event_handler(lv_event_t *e) {
@@ -159,7 +242,20 @@ static void wifi_network_list_event_handler(lv_event_t *e) {
     if (!label) return;
     
     const char *text = lv_label_get_text(label);
-    ESP_LOGI(TAG, "Network selected: %s", text);
+    ESP_LOGI(TAG, "Network selected (demo): %s", text);
+    
+    // Reset all button styles first
+    uint32_t child_count = lv_obj_get_child_count(wifi_network_list);
+    for (uint32_t i = 0; i < child_count; i++) {
+        lv_obj_t *child_btn = lv_obj_get_child(wifi_network_list, i);
+        lv_obj_set_style_bg_color(child_btn, lv_color_hex(0x2C2C2C), 0);
+        lv_obj_set_style_border_width(child_btn, 0, 0);
+    }
+    
+    // Highlight selected button
+    lv_obj_set_style_bg_color(btn, lv_color_hex(0x4CAF50), 0);
+    lv_obj_set_style_border_color(btn, lv_color_hex(0x81C784), 0);
+    lv_obj_set_style_border_width(btn, 2, 0);
     
     // Parse SSID from button text (format: "SSID (Security) RSSI")
     char *ssid_end = strchr(text, '(');
@@ -181,36 +277,52 @@ static void wifi_network_list_event_handler(lv_event_t *e) {
             // Enable connect button
             lv_obj_clear_state(wifi_connect_btn, LV_STATE_DISABLED);
             
-            // Update status
-            lv_label_set_text(wifi_status_label, selected_ssid);
-            lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0x00FF00), 0);
+            // Update status with enhanced messaging
+            char status_msg[128];
+            snprintf(status_msg, sizeof(status_msg), "Selected: %s (Demo Mode)", selected_ssid);
+            lv_label_set_text(wifi_status_label, status_msg);
+            lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0x4CAF50), 0);
         }
     }
 }
 
 static void wifi_connect_btn_event_handler(lv_event_t *e) {
-    ESP_LOGI(TAG, "WiFi connect button clicked for SSID: %s", selected_ssid);
+    ESP_LOGI(TAG, "WiFi connect button clicked (demo mode) for SSID: %s", selected_ssid);
     
     const char *password = "";
     if (selected_auth_mode != WIFI_AUTH_OPEN && wifi_password_textarea) {
         password = lv_textarea_get_text(wifi_password_textarea);
     }
     
-    // Update status
-    lv_label_set_text(wifi_status_label, "Connecting...");
+    // Update status for demo
+    lv_label_set_text(wifi_status_label, "Demo: Connection Simulation...");
     lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFF00), 0);
     
     // Disable connect button
     lv_obj_add_state(wifi_connect_btn, LV_STATE_DISABLED);
     
-    // Attempt connection
+    // Attempt connection (will return ESP_ERR_NOT_SUPPORTED on ESP32-P4)
     esp_err_t ret = wifi_manager_connect_new(selected_ssid, password, true);
-    if (ret != ESP_OK) {
+    if (ret == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGI(TAG, "WiFi connection not supported (ESP32-P4), showing demo behavior");
+        
+        // Simulate connection attempt
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        
+        // Show demo success message
+        lv_label_set_text(wifi_status_label, "Demo: Would connect to ESP32-C6 bridge");
+        lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0x2196F3), 0);
+        
+        // Re-enable connect button after demo
+        lv_obj_clear_state(wifi_connect_btn, LV_STATE_DISABLED);
+        
+    } else if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initiate WiFi connection: %s", esp_err_to_name(ret));
-        lv_label_set_text(wifi_status_label, "Connection failed - please try again");
+        lv_label_set_text(wifi_status_label, "Connection failed - ESP32-P4 bridge required");
         lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFF0000), 0);
         lv_obj_clear_state(wifi_connect_btn, LV_STATE_DISABLED);
     }
+    // If ret == ESP_OK, the callback will handle re-enabling the button
 }
 
 static void wifi_back_btn_event_handler(lv_event_t *e) {
@@ -344,4 +456,51 @@ void wifi_setup_clear_password(void) {
     if (wifi_password_textarea) {
         lv_textarea_set_text(wifi_password_textarea, "");
     }
+}
+
+void wifi_populate_demo_networks(void) {
+    ESP_LOGI(TAG, "Populating demo WiFi networks for interface demonstration");
+    
+    // Clear existing list
+    if (wifi_network_list) {
+        lv_obj_clean(wifi_network_list);
+    }
+    
+    // Create demo networks to show interface functionality
+    struct {
+        const char *name;
+        const char *security;
+        int rssi;
+        uint32_t color;
+    } demo_networks[] = {
+        {"HomeNetwork_5G", "WPA2", -35, 0x00FF00},      // Strong - green
+        {"OfficeWiFi", "WPA2-Enterprise", -45, 0x00FF00}, // Strong - green  
+        {"GuestNetwork", "Open", -55, 0xFFFF00},         // Medium - yellow
+        {"Neighbor_WiFi", "WPA3", -65, 0xFFFF00},        // Medium - yellow
+        {"PublicHotspot", "Open", -75, 0xFF8800},        // Weak - orange
+        {"ESP32-P4_Demo", "WPA2", -40, 0x2196F3},        // Demo - blue
+    };
+    
+    int demo_count = sizeof(demo_networks) / sizeof(demo_networks[0]);
+    
+    for (int i = 0; i < demo_count; i++) {
+        char network_text[128];
+        snprintf(network_text, sizeof(network_text), "%s (%s) %ddBm", 
+                demo_networks[i].name, demo_networks[i].security, demo_networks[i].rssi);
+        
+        lv_obj_t *btn = lv_list_add_btn(wifi_network_list, LV_SYMBOL_WIFI, network_text);
+        
+        // Style the button based on signal strength
+        lv_obj_set_style_text_color(btn, lv_color_hex(demo_networks[i].color), 0);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x2C2C2C), 0);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x404040), LV_STATE_PRESSED);
+    }
+    
+    // Update status
+    if (wifi_status_label) {
+        lv_label_set_text(wifi_status_label, "Demo Networks (ESP32-P4 Bridge Required)");
+        lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0x2196F3), 0);
+    }
+    
+    ESP_LOGI(TAG, "Demo networks populated successfully");
 }

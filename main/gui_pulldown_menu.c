@@ -221,48 +221,20 @@ static void brightness_slider_event_handler(lv_event_t *e) {
 static void wifi_toggle_event_handler(lv_event_t *e) {
     gui_pulldown_menu_t *menu = (gui_pulldown_menu_t*)lv_event_get_user_data(e);
     
-    ESP_LOGI(TAG, "WiFi Tools button clicked - creating minimal safe screen");
+    ESP_LOGI(TAG, "WiFi Tools button clicked - loading enhanced WiFi setup screen");
     
     // Hide the pulldown menu first
     if (menu) {
         gui_pulldown_menu_hide(menu);
     }
     
-    // Create a simple message screen instead of complex WiFi setup
-    lv_obj_t *wifi_screen = lv_obj_create(NULL);
-    lv_obj_add_style(wifi_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // Create the enhanced WiFi setup screen
+    create_wifi_setup_screen();
     
-    // Simple title
-    lv_obj_t *title = lv_label_create(wifi_screen);
-    lv_label_set_text(title, "WiFi Tools");
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 50);
+    // Load the WiFi setup screen
+    lv_screen_load(wifi_setup_screen);
     
-    // Status message
-    lv_obj_t *status = lv_label_create(wifi_screen);
-    lv_label_set_text(status, "WiFi functionality coming soon\nESP32-P4 requires ESP32-C6 bridge");
-    lv_obj_set_style_text_color(status, lv_color_hex(0xFFFF00), 0);
-    lv_obj_set_style_text_align(status, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(status, LV_ALIGN_CENTER, 0, 0);
-    
-    // Back button
-    lv_obj_t *back_btn = lv_button_create(wifi_screen);
-    lv_obj_set_size(back_btn, 120, 50);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -50);
-    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x4CAF50), 0);
-    
-    lv_obj_t *back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, LV_SYMBOL_LEFT " Back");
-    lv_obj_center(back_label);
-    
-    // Simple back button handler - just return to main screen
-    lv_obj_add_event_cb(back_btn, wifi_back_btn_event_handler, LV_EVENT_CLICKED, NULL);
-    
-    // Load the screen
-    lv_screen_load(wifi_screen);
-    
-    ESP_LOGI(TAG, "Safe WiFi info screen displayed");
+    ESP_LOGI(TAG, "Enhanced WiFi setup screen loaded");
 }
 
 static void wifi_back_btn_event_handler(lv_event_t *e) {

@@ -6,5 +6,8 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -u _printf_float")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -u _printf_float")
 
+# Set component paths
+set(EXTRA_COMPONENT_DIRS "components")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(m5stack-tab5-lvgl)
