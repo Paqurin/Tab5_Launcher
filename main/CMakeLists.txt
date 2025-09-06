@@ -1,4 +1,4 @@
-idf_component_register(SRCS "wifi_manager.c" "gui_pulldown_menu.c" "gui_screen_wifi_setup.c" "gui_screen_settings.c" "gui_file_browser_v2.c" "config_manager.c" "file_operations.c" "gui_screen_reboot.c" "gui_state.c" 
+idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_wifi_setup.c" "gui_screen_settings.c" "gui_file_browser_v2.c" "config_manager.c" "file_operations.c" "gui_screen_reboot.c" "gui_state.c" 
                             "gui_progress.c" 
                             "gui_events.c" 
                             "gui_screens.c"

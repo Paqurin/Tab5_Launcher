@@ -30,7 +30,7 @@ static void wifi_back_btn_event_handler(lv_event_t *e);
 
 // WiFi manager callbacks
 static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr);
-static void wifi_scan_callback(wifi_scan_result_t *results, uint16_t count);
+static void wifi_scan_callback(wifi_scan_result_t *results, uint8_t count);
 
 void create_wifi_setup_screen(void) {
     ESP_LOGI(TAG, "Creating WiFi setup screen");
@@ -268,7 +268,7 @@ static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr) {
     }
 }
 
-static void wifi_scan_callback(wifi_scan_result_t *results, uint16_t count) {
+static void wifi_scan_callback(wifi_scan_result_t *results, uint8_t count) {
     ESP_LOGI(TAG, "WiFi scan completed with %d networks found", count);
     
     // Clear existing list
