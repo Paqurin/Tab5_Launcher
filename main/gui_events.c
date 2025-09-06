@@ -42,6 +42,23 @@ void main_menu_event_handler(lv_event_t *e) {
                 create_settings_screen();
                 lv_screen_load(get_settings_screen());
                 break;
+            case 4: // Eject Firmware
+                if (firmware_loader_is_firmware_ready()) {
+                    ESP_LOGI(TAG, "Ejecting firmware...");
+                    esp_err_t ret = firmware_loader_unload_firmware();
+                    if (ret == ESP_OK) {
+                        ESP_LOGI(TAG, "✓ Firmware ejected successfully");
+                        // Refresh the main screen to update button states
+                        create_main_screen();
+                        lv_screen_load(main_screen);
+                    } else {
+                        ESP_LOGE(TAG, "Failed to eject firmware: %s", esp_err_to_name(ret));
+                        // Could add error dialog here in future
+                    }
+                } else {
+                    ESP_LOGW(TAG, "No firmware available to eject");
+                }
+                break;
         }
     }
 }

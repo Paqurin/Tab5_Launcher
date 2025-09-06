@@ -2,6 +2,7 @@
 #define FIRMWARE_LOADER_H
 
 #include "esp_err.h"
+#include "esp_app_desc.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -77,5 +78,19 @@ esp_err_t firmware_loader_boot_firmware_once(void);
  * @return ESP_OK (never returns)
  */
 esp_err_t firmware_loader_restart_to_new_firmware(void);
+
+/**
+ * @brief Unload/eject currently loaded firmware from OTA partition
+ * This erases the OTA partition and clears any boot flags
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t firmware_loader_unload_firmware(void);
+
+/**
+ * @brief Get information about currently loaded firmware
+ * @param app_desc Pointer to app description structure to fill
+ * @return ESP_OK if firmware is loaded, ESP_ERR_NOT_FOUND if no firmware
+ */
+esp_err_t firmware_loader_get_firmware_info(esp_app_desc_t *app_desc);
 
 #endif // FIRMWARE_LOADER_H
