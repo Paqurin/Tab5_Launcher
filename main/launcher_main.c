@@ -140,10 +140,16 @@ void app_main(void) {
             
             ESP_LOGI(TAG, "Power readings: %.2fV, %.1fmA, charging: %s", voltage, current_ma, charging ? "yes" : "no");
             
-            // Only update if we're on the main screen
+            // Update status bars on all screens
             lv_obj_t *active_screen = lv_screen_active();
             if (active_screen == main_screen) {
                 update_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == file_manager_screen) {
+                update_file_manager_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == firmware_loader_screen) {
+                update_firmware_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == settings_screen) {
+                update_settings_status_bar(voltage, current_ma, charging);
             }
         }
         

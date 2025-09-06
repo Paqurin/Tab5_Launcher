@@ -8,6 +8,7 @@ idf_component_register(SRCS "gui_screen_settings.c" "gui_file_browser_v2.c" "con
                             "gui_screen_firmware.c"
                             "gui_screen_progress.c"
                             "gui_screen_splash.c"
+                            "gui_status_bar.c"
                             "launcher_main.c"
                             "hal.c"
                             "sd_manager.c"

@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_status_bar.h"
 #include "gui_file_browser_v2.h"
 #include "config_manager.h"
 #include "bsp/m5stack_tab5.h"
@@ -15,6 +16,7 @@ static const char *TAG = "GUI_SETTINGS";
 lv_obj_t *settings_screen = NULL;
 static lv_obj_t *settings_container = NULL;
 static lv_obj_t *tabview = NULL;
+static gui_status_bar_t *status_bar = NULL;
 
 // System settings controls
 static lv_obj_t *brightness_slider = NULL;
@@ -74,44 +76,38 @@ void create_settings_screen(void) {
     settings_screen = lv_obj_create(NULL);
     lv_obj_add_style(settings_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create title bar
-    lv_obj_t *title_bar = lv_obj_create(settings_screen);
-    lv_obj_set_size(title_bar, lv_pct(100), 60);
-    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_set_style_bg_color(title_bar, lv_color_hex(0x2196F3), 0);
-    lv_obj_set_style_border_opa(title_bar, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_radius(title_bar, 0, 0);
+    // Create status bar at top
+    status_bar = gui_status_bar_create(settings_screen);
     
-    // Title label
-    lv_obj_t *title_label = lv_label_create(title_bar);
-    lv_label_set_text(title_label, "Settings");
-    lv_obj_set_style_text_color(title_label, lv_color_white(), 0);
-    lv_obj_set_style_text_font(title_label, THEME_FONT_LARGE, 0);
-    lv_obj_align(title_label, LV_ALIGN_LEFT_MID, 20, 0);
+    // Create a centered container for the screen (below status bar)
+    lv_obj_t *center_container = lv_obj_create(settings_screen);
+    lv_obj_set_size(center_container, lv_pct(80), lv_pct(85));
+    lv_obj_align(center_container, LV_ALIGN_CENTER, 0, 20);
+    lv_obj_set_style_bg_opa(center_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(center_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(center_container, 10, 0);
+    
+    // Title
+    lv_obj_t *title = lv_label_create(center_container);
+    lv_label_set_text(title, "Settings");
+    apply_title_style(title);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
     
     // Back button
-    lv_obj_t *back_btn = lv_btn_create(title_bar);
-    lv_obj_set_size(back_btn, 80, 40);
-    lv_obj_align(back_btn, LV_ALIGN_RIGHT_MID, -10, 0);
+    lv_obj_t *back_btn = lv_button_create(center_container);
+    lv_obj_set_size(back_btn, 100, 50);
+    lv_obj_align(back_btn, LV_ALIGN_TOP_RIGHT, -10, 35);
     apply_button_style(back_btn);
     lv_obj_add_event_cb(back_btn, back_button_event_handler, LV_EVENT_CLICKED, NULL);
     
     lv_obj_t *back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, "Back");
-    lv_obj_set_style_text_color(back_label, lv_color_white(), 0);
+    lv_label_set_text(back_label, LV_SYMBOL_LEFT " Back");
     lv_obj_center(back_label);
     
-    // Create main container for tabs - position below title bar
-    settings_container = lv_obj_create(settings_screen);
-    lv_obj_set_size(settings_container, lv_pct(100), lv_pct(100) - 60);
-    lv_obj_align(settings_container, LV_ALIGN_TOP_LEFT, 0, 60);
-    lv_obj_set_style_bg_opa(settings_container, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_opa(settings_container, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_all(settings_container, 10, 0);
-    
-    // Create tabview
-    tabview = lv_tabview_create(settings_container);
-    lv_obj_set_size(tabview, lv_pct(100), lv_pct(100));
+    // Create tabview in the center container
+    tabview = lv_tabview_create(center_container);
+    lv_obj_set_size(tabview, lv_pct(95), lv_pct(75));
+    lv_obj_align(tabview, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
     lv_tabview_set_tab_bar_size(tabview, 60);
     
@@ -567,6 +563,15 @@ static void save_settings(void) {
         ESP_LOGI(TAG, "Settings saved successfully");
     } else {
         ESP_LOGE(TAG, "Failed to save settings: %s", esp_err_to_name(ret));
+    }
+}
+
+void update_settings_status_bar(float voltage, float current_ma, bool charging) {
+    if (status_bar) {
+        gui_status_bar_update_power(status_bar, voltage, current_ma, charging);
+        gui_status_bar_update_sdcard(status_bar);
+        // WiFi update would go here when WiFi manager is available
+        // gui_status_bar_update_wifi(status_bar, wifi_connected, rssi);
     }
 }
 

@@ -76,4 +76,19 @@ void update_main_screen(void);
  */
 void update_status_bar(float voltage, float current_ma, bool charging);
 
+/**
+ * @brief Update file manager status bar
+ */
+void update_file_manager_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update firmware loader status bar
+ */
+void update_firmware_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update settings status bar
+ */
+void update_settings_status_bar(float voltage, float current_ma, bool charging);
+
 #endif // GUI_SCREENS_H

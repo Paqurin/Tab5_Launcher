@@ -2,6 +2,7 @@
 #include "gui_events.h"
 #include "gui_state.h"
 #include "gui_styles.h"
+#include "gui_status_bar.h"
 #include "sd_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
@@ -13,15 +14,19 @@ lv_obj_t *firmware_loader_screen = NULL;
 lv_obj_t *firmware_list = NULL;
 lv_obj_t *flash_btn = NULL;
 lv_obj_t *status_label = NULL;
+static gui_status_bar_t *status_bar = NULL;
 
 void create_firmware_loader_screen(void) {
     firmware_loader_screen = lv_obj_create(NULL);
     lv_obj_add_style(firmware_loader_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create a centered container for the screen
+    // Create status bar at top
+    status_bar = gui_status_bar_create(firmware_loader_screen);
+    
+    // Create a centered container for the screen (below status bar)
     lv_obj_t *center_container = lv_obj_create(firmware_loader_screen);
-    lv_obj_set_size(center_container, lv_pct(80), lv_pct(100));
-    lv_obj_align(center_container, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_size(center_container, lv_pct(80), lv_pct(85));
+    lv_obj_align(center_container, LV_ALIGN_CENTER, 0, 20);
     lv_obj_set_style_bg_opa(center_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(center_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(center_container, 10, 0);
@@ -67,6 +72,15 @@ void create_firmware_loader_screen(void) {
     lv_obj_set_style_text_color(status_label, THEME_WARNING_COLOR, 0);
     lv_obj_set_style_text_font(status_label, THEME_FONT_NORMAL, 0);
     lv_obj_align(status_label, LV_ALIGN_BOTTOM_MID, 0, -20);
+}
+
+void update_firmware_status_bar(float voltage, float current_ma, bool charging) {
+    if (status_bar) {
+        gui_status_bar_update_power(status_bar, voltage, current_ma, charging);
+        gui_status_bar_update_sdcard(status_bar);
+        // WiFi update would go here when WiFi manager is available
+        // gui_status_bar_update_wifi(status_bar, wifi_connected, rssi);
+    }
 }
 
 void update_firmware_list(void) {
