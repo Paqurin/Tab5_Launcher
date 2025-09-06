@@ -19,6 +19,7 @@ static lv_obj_t *status_bar_current = NULL;
 static lv_obj_t *status_bar_current_unit = NULL;
 static lv_obj_t *status_bar_charging = NULL;
 static lv_obj_t *status_bar_sdcard = NULL;
+static lv_obj_t *status_bar_wifi = NULL;
 
 // Forward declaration for status bar click handler
 static void status_bar_click_handler(lv_event_t *e);
@@ -46,6 +47,20 @@ void create_main_screen(void) {
     lv_obj_set_style_text_font(status_title, &lv_font_montserrat_20, 0);
     lv_obj_align(status_title, LV_ALIGN_CENTER, 0, 0);
     
+    // Create container for left-aligned WiFi status
+    lv_obj_t *wifi_container = lv_obj_create(status_bar);
+    lv_obj_set_size(wifi_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_align(wifi_container, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_bg_opa(wifi_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(wifi_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(wifi_container, 2, 0);
+    
+    // WiFi status indicator (left side)
+    status_bar_wifi = lv_label_create(wifi_container);
+    lv_label_set_text(status_bar_wifi, LV_SYMBOL_WIFI);
+    lv_obj_set_style_text_color(status_bar_wifi, lv_color_hex(0x666666), 0); // Gray when disconnected
+    lv_obj_set_style_text_font(status_bar_wifi, &lv_font_montserrat_18, 0);
+
     // Create container for right-aligned status info
     lv_obj_t *status_container = lv_obj_create(status_bar);
     lv_obj_set_size(status_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -56,23 +71,17 @@ void create_main_screen(void) {
     lv_obj_set_flex_flow(status_container, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(status_container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     
-    // Left pipe symbol (2 fonts larger = 20pt)
-    lv_obj_t *left_pipe = lv_label_create(status_container);
-    lv_label_set_text(left_pipe, "|");
-    lv_obj_set_style_text_color(left_pipe, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_text_font(left_pipe, &lv_font_montserrat_20, 0);
-    
     // SD card symbol (1 font larger = 18pt)
     status_bar_sdcard = lv_label_create(status_container);
     lv_label_set_text(status_bar_sdcard, LV_SYMBOL_SD_CARD);
     lv_obj_set_style_text_color(status_bar_sdcard, lv_color_hex(0x666666), 0); // Gray when not detected
     lv_obj_set_style_text_font(status_bar_sdcard, &lv_font_montserrat_18, 0);
     
-    // Middle pipe symbol (2 fonts larger = 20pt)
-    lv_obj_t *middle_pipe = lv_label_create(status_container);
-    lv_label_set_text(middle_pipe, "|");
-    lv_obj_set_style_text_color(middle_pipe, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_text_font(middle_pipe, &lv_font_montserrat_20, 0);
+    // Left pipe symbol (2 fonts larger = 20pt)
+    lv_obj_t *left_pipe = lv_label_create(status_container);
+    lv_label_set_text(left_pipe, "|");
+    lv_obj_set_style_text_color(left_pipe, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_text_font(left_pipe, &lv_font_montserrat_20, 0);
     
     // Voltage number (1 font larger = 18pt)
     status_bar_voltage = lv_label_create(status_container);
@@ -215,6 +224,24 @@ static void status_bar_click_handler(lv_event_t *e) {
     ESP_LOGI(TAG, "Status bar clicked - toggling pulldown menu");
     if (pulldown_menu) {
         gui_pulldown_menu_toggle(pulldown_menu);
+    }
+}
+
+void update_status_bar_wifi(bool connected, int8_t rssi) {
+    if (!status_bar_wifi) return;
+    
+    if (connected) {
+        // Show connected WiFi with signal strength indication
+        if (rssi > -50) {
+            lv_obj_set_style_text_color(status_bar_wifi, lv_color_hex(0x00FF00), 0); // Strong signal - green
+        } else if (rssi > -70) {
+            lv_obj_set_style_text_color(status_bar_wifi, lv_color_hex(0xFFFF00), 0); // Medium signal - yellow
+        } else {
+            lv_obj_set_style_text_color(status_bar_wifi, lv_color_hex(0xFF8800), 0); // Weak signal - orange
+        }
+    } else {
+        // Disconnected - gray
+        lv_obj_set_style_text_color(status_bar_wifi, lv_color_hex(0x666666), 0);
     }
 }
 

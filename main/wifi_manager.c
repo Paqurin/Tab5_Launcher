@@ -18,71 +18,11 @@
 
 static const char *TAG = "WIFI_MANAGER";
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
-// Stub implementations for WiFi functions on ESP32-P4
+// NVS storage constants
+#define WIFI_MANAGER_NVS_NAMESPACE "wifi_manager"
+#define WIFI_MANAGER_NVS_KEY "wifi_credentials"
 
-// Event base definition
-const char* WIFI_EVENT = "WIFI_EVENT";
-
-esp_err_t esp_wifi_init(const wifi_init_config_t *config) {
-    ESP_LOGI(TAG, "esp_wifi_init: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_init(config);
-}
-
-esp_err_t esp_wifi_deinit(void) {
-    ESP_LOGI(TAG, "esp_wifi_deinit: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_deinit();
-}
-
-esp_err_t esp_wifi_set_mode(wifi_mode_t mode) {
-    ESP_LOGI(TAG, "esp_wifi_set_mode: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_set_mode(mode);
-}
-
-esp_err_t esp_wifi_start(void) {
-    ESP_LOGI(TAG, "esp_wifi_start: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_start();
-}
-
-esp_err_t esp_wifi_stop(void) {
-    ESP_LOGI(TAG, "esp_wifi_stop: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_stop();
-}
-
-esp_err_t esp_wifi_set_config(wifi_interface_t interface, wifi_config_t *conf) {
-    ESP_LOGI(TAG, "esp_wifi_set_config: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_set_config(interface, conf);
-}
-
-esp_err_t esp_wifi_connect(void) {
-    ESP_LOGI(TAG, "esp_wifi_connect: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_connect();
-}
-
-esp_err_t esp_wifi_disconnect(void) {
-    ESP_LOGI(TAG, "esp_wifi_disconnect: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_disconnect();
-}
-
-esp_err_t esp_wifi_scan_start(const wifi_scan_config_t *config, bool block) {
-    ESP_LOGI(TAG, "esp_wifi_scan_start: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_scan_start(config, block);
-}
-
-esp_err_t esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records) {
-    ESP_LOGI(TAG, "esp_wifi_scan_get_ap_records: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_scan_get_ap_records(number, ap_records);
-}
-
-esp_err_t esp_wifi_sta_get_ap_info(wifi_ap_record_t *ap_info) {
-    ESP_LOGI(TAG, "esp_wifi_sta_get_ap_info: Using esp_wifi_remote for ESP32-P4");
-    return esp_wifi_remote_sta_get_ap_info(ap_info);
-}
-
-// Note: esp_netif_create_default_wifi_sta should work normally on ESP32-P4
-// as it's a network interface function, not a WiFi-specific function
-
-#endif // CONFIG_IDF_TARGET_ESP32P4
+// WiFi functions are provided by esp_wifi or esp_wifi_remote components
 
 // Event group for WiFi events
 static EventGroupHandle_t s_wifi_event_group;
@@ -109,33 +49,83 @@ static void wifi_manager_set_status(wifi_status_t status);
 esp_err_t wifi_manager_init(wifi_status_callback_t status_callback) {
     ESP_LOGI(TAG, "Initializing WiFi Manager");
     
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    // ESP32-P4 stub implementation - no actual WiFi initialization
+    ESP_LOGI(TAG, "ESP32-P4 detected - using stub WiFi implementation");
     s_status_callback = status_callback;
     
-    // Initialize NVS
+    // Create minimal event group for compatibility
+    if (s_wifi_event_group == NULL) {
+        s_wifi_event_group = xEventGroupCreate();
+    }
+    
+    // Set status directly without callback
+    s_wifi_status = WIFI_STATUS_DISCONNECTED;
+    ESP_LOGI(TAG, "ESP32-P4 WiFi status set to disconnected (no callback)");
+    
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+    
+    // Check if already initialized
+    if (s_wifi_event_group != NULL) {
+        ESP_LOGI(TAG, "WiFi Manager already initialized");
+        s_status_callback = status_callback;
+        return ESP_OK;
+    }
+    
+    s_status_callback = status_callback;
+    
+    // Initialize NVS (safe to call multiple times)
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
+        nvs_flash_erase();
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(ret);
-    
-    // Initialize network interface
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    
-    s_sta_netif = esp_netif_create_default_wifi_sta();
-    if (!s_sta_netif) {
-        ESP_LOGE(TAG, "Failed to create default WiFi STA interface");
-        return ESP_FAIL;
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "NVS init failed: %s", esp_err_to_name(ret));
     }
     
-    // Initialize WiFi
+    // Initialize network interface (check if already done)
+    ret = esp_netif_init();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to init netif: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // Create default event loop (safe to call multiple times)
+    ret = esp_event_loop_create_default();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to create event loop: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // Check if STA interface already exists
+    if (s_sta_netif == NULL) {
+        s_sta_netif = esp_netif_create_default_wifi_sta();
+        if (!s_sta_netif) {
+            ESP_LOGW(TAG, "Failed to create default WiFi STA interface (may already exist)");
+            // Try to get existing interface
+            s_sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+            if (!s_sta_netif) {
+                ESP_LOGE(TAG, "No WiFi STA interface available");
+                return ESP_FAIL;
+            }
+        }
+    }
+    
+    // Initialize WiFi (safe for ESP32-P4)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ret = esp_wifi_init(&cfg);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "WiFi initialization failed: %s", esp_err_to_name(ret));
         if (ret == ESP_ERR_NOT_SUPPORTED) {
             ESP_LOGI(TAG, "WiFi not supported on this platform (ESP32-P4 requires ESP-Hosted)");
+            // Continue anyway to provide UI functionality
+        } else if (ret == ESP_ERR_INVALID_STATE) {
+            ESP_LOGI(TAG, "WiFi already initialized");
+        } else {
+            ESP_LOGE(TAG, "Critical WiFi init error: %s", esp_err_to_name(ret));
+            return ret;
         }
     }
     
@@ -246,7 +236,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
             
             case WIFI_EVENT_SCAN_DONE: {
                 wifi_event_sta_scan_done_t* event = (wifi_event_sta_scan_done_t*) event_data;
-                ESP_LOGI(TAG, "WiFi scan completed, found %" PRIu32 " networks", event->number);
+                ESP_LOGI(TAG, "WiFi scan completed, found %d networks", (int)event->number);
                 
                 if (s_scan_callback) {
                     uint16_t scan_count = MIN(event->number, MAX_SCAN_RESULTS);
@@ -260,7 +250,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
                             results[i].ssid[MAX_SSID_LEN - 1] = '\0';
                             results[i].rssi = ap_records[i].rssi;
                             results[i].auth_mode = ap_records[i].authmode;
-                            results[i].channel = ap_records[i].primary;
+                            results[i].is_open = (ap_records[i].authmode == WIFI_AUTH_OPEN);
                         }
                         s_scan_callback(results, scan_count);
                     } else {
@@ -300,9 +290,14 @@ static void wifi_manager_set_status(wifi_status_t status) {
         s_wifi_status = status;
         ESP_LOGI(TAG, "WiFi status changed to: %s", wifi_manager_status_to_string(status));
         
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+        // Don't call status callback on ESP32-P4 to prevent GUI crashes
+        ESP_LOGI(TAG, "ESP32-P4: Status callback suppressed to prevent crashes");
+#else
         if (s_status_callback) {
-            s_status_callback(status, s_ip_address);
+            s_status_callback(status, wifi_manager_status_to_string(status));
         }
+#endif
     }
 }
 
@@ -322,6 +317,12 @@ esp_err_t wifi_manager_connect(void) {
 esp_err_t wifi_manager_connect_new(const char *ssid, const char *password, bool save_credentials) {
     ESP_LOGI(TAG, "Connecting to WiFi network: %s", ssid);
     
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    ESP_LOGW(TAG, "WiFi connection not supported on ESP32-P4");
+    s_wifi_status = WIFI_STATUS_CONNECTION_FAILED;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+    
     if (!ssid || strlen(ssid) == 0) {
         ESP_LOGE(TAG, "Invalid SSID");
         return ESP_ERR_INVALID_ARG;
@@ -334,7 +335,7 @@ esp_err_t wifi_manager_connect_new(const char *ssid, const char *password, bool 
         creds.ssid[MAX_SSID_LEN - 1] = '\0';
         strncpy(creds.password, password ? password : "", MAX_PASSWORD_LEN - 1);
         creds.password[MAX_PASSWORD_LEN - 1] = '\0';
-        creds.auto_connect = true;
+        creds.auth_mode = WIFI_AUTH_WPA2_PSK;
         
         esp_err_t save_ret = wifi_manager_save_credentials(&creds);
         if (save_ret != ESP_OK) {
@@ -343,7 +344,8 @@ esp_err_t wifi_manager_connect_new(const char *ssid, const char *password, bool 
     }
     
     // Configure WiFi
-    wifi_config_t wifi_config = {0};
+    wifi_config_t wifi_config;
+    memset(&wifi_config, 0, sizeof(wifi_config_t));
     strncpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid) - 1);
     if (password && strlen(password) > 0) {
         strncpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password) - 1);
@@ -428,11 +430,11 @@ static esp_err_t wifi_manager_save_credentials(const wifi_credentials_t *credent
     cJSON *json = cJSON_CreateObject();
     cJSON *ssid = cJSON_CreateString(credentials->ssid);
     cJSON *password = cJSON_CreateString(credentials->password);
-    cJSON *auto_connect = cJSON_CreateBool(credentials->auto_connect);
+    cJSON *auth_mode = cJSON_CreateNumber(credentials->auth_mode);
     
     cJSON_AddItemToObject(json, "ssid", ssid);
     cJSON_AddItemToObject(json, "password", password);
-    cJSON_AddItemToObject(json, "auto_connect", auto_connect);
+    cJSON_AddItemToObject(json, "auth_mode", auth_mode);
     
     char *json_string = cJSON_Print(json);
     if (!json_string) {
@@ -493,12 +495,12 @@ static esp_err_t wifi_manager_load_credentials(wifi_credentials_t *credentials) 
     
     if (!json) {
         ESP_LOGE(TAG, "Failed to parse stored credentials JSON");
-        return ESP_ERR_INVALID_DATA;
+        return ESP_ERR_INVALID_ARG;
     }
     
     cJSON *ssid = cJSON_GetObjectItem(json, "ssid");
     cJSON *password = cJSON_GetObjectItem(json, "password");
-    cJSON *auto_connect = cJSON_GetObjectItem(json, "auto_connect");
+    cJSON *auth_mode = cJSON_GetObjectItem(json, "auth_mode");
     
     if (cJSON_IsString(ssid)) {
         strncpy(credentials->ssid, ssid->valuestring, MAX_SSID_LEN - 1);
@@ -510,7 +512,11 @@ static esp_err_t wifi_manager_load_credentials(wifi_credentials_t *credentials) 
         credentials->password[MAX_PASSWORD_LEN - 1] = '\0';
     }
     
-    credentials->auto_connect = cJSON_IsTrue(auto_connect);
+    if (cJSON_IsNumber(auth_mode)) {
+        credentials->auth_mode = (wifi_auth_mode_t)auth_mode->valueint;
+    } else {
+        credentials->auth_mode = WIFI_AUTH_WPA2_PSK;
+    }
     
     cJSON_Delete(json);
     return ESP_OK;

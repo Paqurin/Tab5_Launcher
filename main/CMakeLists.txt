@@ -19,5 +19,5 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_wifi_setup.c" "gui
                             "power_monitor.c"
                             "wifi_manager.c"
                     INCLUDE_DIRS "."
-                    REQUIRES nvs_flash json m5stack-tab5 spiffs esp_app_format
-                    PRIV_REQUIRES app_update)
+                    REQUIRES nvs_flash json m5stack-tab5 spiffs esp_app_format espressif__esp_lcd_touch
+                    PRIV_REQUIRES app_update fatfs)

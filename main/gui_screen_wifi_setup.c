@@ -29,8 +29,8 @@ static void wifi_connect_btn_event_handler(lv_event_t *e);
 static void wifi_back_btn_event_handler(lv_event_t *e);
 
 // WiFi manager callbacks
-static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr);
-static void wifi_scan_callback(wifi_scan_result_t *results, uint8_t count);
+static void wifi_status_callback(wifi_status_t status, const char* message);
+static void wifi_scan_callback(wifi_scan_result_t *results, int count);
 
 void create_wifi_setup_screen(void) {
     ESP_LOGI(TAG, "Creating enhanced WiFi setup screen");
@@ -185,10 +185,18 @@ void create_wifi_setup_screen(void) {
     lv_label_set_text(back_label, LV_SYMBOL_LEFT " Back");
     lv_obj_center(back_label);
     
-    // Initialize WiFi manager with status callback (safe for ESP32-P4)
+    // Initialize WiFi manager with error handling
     esp_err_t wifi_init_result = wifi_manager_init(wifi_status_callback);
     if (wifi_init_result != ESP_OK) {
-        ESP_LOGW(TAG, "WiFi manager init returned: %s (expected for ESP32-P4)", esp_err_to_name(wifi_init_result));
+        ESP_LOGW(TAG, "WiFi manager init failed: %s (expected for ESP32-P4)", esp_err_to_name(wifi_init_result));
+        // Update status to show WiFi unavailable
+        lv_label_set_text(wifi_status_label, "WiFi not available (ESP32-P4)");
+        lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFF6B6B), 0);
+        
+        // Disable WiFi-related buttons
+        lv_obj_add_state(wifi_scan_btn, LV_STATE_DISABLED);
+    } else {
+        ESP_LOGI(TAG, "WiFi manager initialized successfully");
     }
     
     // Populate with demo networks to show interface functionality
@@ -197,14 +205,32 @@ void create_wifi_setup_screen(void) {
     ESP_LOGI(TAG, "Enhanced WiFi setup screen created successfully");
 }
 
+// Timer callback for simulated scan completion
+static void wifi_scan_timer_cb(lv_timer_t *timer) {
+    ESP_LOGI(TAG, "Simulated WiFi scan completed");
+    
+    // Re-enable scan button
+    lv_obj_clear_state(wifi_scan_btn, LV_STATE_DISABLED);
+    
+    // Update status
+    lv_label_set_text(wifi_status_label, "Scan complete - ESP32-P4 demo mode");
+    lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0x00FF00), 0);
+    
+    // Add some demo networks to show functionality
+    wifi_populate_demo_networks();
+    
+    // Clean up timer
+    lv_timer_del(timer);
+}
+
 static void wifi_scan_btn_event_handler(lv_event_t *e) {
-    ESP_LOGI(TAG, "WiFi scan button clicked (demo mode)");
+    ESP_LOGI(TAG, "WiFi scan button clicked - ESP32-P4 demo mode");
     
     // Clear existing list
     lv_obj_clean(wifi_network_list);
     
     // Update status to show scanning
-    lv_label_set_text(wifi_status_label, "Scanning (Demo Mode)...");
+    lv_label_set_text(wifi_status_label, "Scanning for networks...");
     lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFF00), 0);
     
     // Disable scan button temporarily
@@ -213,6 +239,11 @@ static void wifi_scan_btn_event_handler(lv_event_t *e) {
     // Start WiFi scan (will return ESP_ERR_NOT_SUPPORTED on ESP32-P4)
     esp_err_t ret = wifi_manager_scan_start(wifi_scan_callback);
     if (ret == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGI(TAG, "WiFi scan not supported - using demo mode with timer");
+        
+        // Create timer for simulated scan completion (2 seconds)
+        lv_timer_create(wifi_scan_timer_cb, 2000, NULL);
+    } else if (ret != ESP_OK) {
         ESP_LOGI(TAG, "WiFi scan not supported (ESP32-P4), showing demo results");
         
         // Simulate scan delay
@@ -332,7 +363,7 @@ static void wifi_back_btn_event_handler(lv_event_t *e) {
     lv_screen_load(main_screen);
 }
 
-static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr) {
+static void wifi_status_callback(wifi_status_t status, const char* message) {
     ESP_LOGI(TAG, "WiFi status callback: %s", wifi_manager_status_to_string(status));
     
     // Update status display
@@ -380,7 +411,7 @@ static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr) {
     }
 }
 
-static void wifi_scan_callback(wifi_scan_result_t *results, uint8_t count) {
+static void wifi_scan_callback(wifi_scan_result_t *results, int count) {
     ESP_LOGI(TAG, "WiFi scan completed with %d networks found", count);
     
     // Clear existing list

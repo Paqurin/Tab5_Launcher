@@ -75,6 +75,7 @@ void update_main_screen(void);
  * @brief Update status bar with current voltage, current readings, and charging status
  */
 void update_status_bar(float voltage, float current_ma, bool charging);
+void update_status_bar_wifi(bool connected, int8_t rssi);
 
 /**
  * @brief Update file manager status bar
