@@ -7,6 +7,7 @@
 #include "esp_partition.h"
 #include "hal.h"
 #include "sd_manager.h"
+#include "config_manager.h"
 #include "gui_manager.h"
 #include "gui_state.h"
 #include "firmware_loader.h"
@@ -52,10 +53,21 @@ void app_main(void) {
     hal_init();
     hal_touchpad_init();
     
-    // Initialize SD card
+    // Initialize configuration manager (SPIFFS)
+    ESP_LOGI(TAG, "Initializing configuration manager...");
+    if (config_manager_init() != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to initialize configuration manager - using defaults");
+    }
+    
+    // Initialize SD card (can be configured via config manager)
     ESP_LOGI(TAG, "Initializing SD card...");
-    if (sd_manager_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize SD card");
+    launcher_config_t *config = config_manager_get_current();
+    if (config->system.auto_mount_sd) {
+        if (sd_manager_init() != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to initialize SD card");
+        }
+    } else {
+        ESP_LOGI(TAG, "SD card auto-mount disabled in configuration");
     }
     
     // Initialize power monitor

@@ -62,15 +62,27 @@ Based on comprehensive research, the bmorcelli Launcher is a sophisticated ESP32
   - Create pagination for large directories
 - **Success Criteria**: Touch-responsive file browser with smooth scrolling
 
-**Task 1.4: Enhanced Configuration Management**
-- **Files**: `main/config_manager.c`, `main/settings_ui.c`
-- **Description**: Expand configuration system beyond current basic settings
+**Task 1.4: Enhanced Configuration Management System with Settings UI**
+- **Files**: `main/gui_screen_settings.c`, `main/gui_screen_settings.h`, `main/gui_screen_main.c`
+- **Description**: Create Settings screen with full configuration UI
 - **Key Changes**:
-  - Add file browser preferences (view modes, sorting)
-  - Create theme and UI customization options
-  - Implement user preference persistence
-  - Add configuration validation and defaults
-- **Success Criteria**: Comprehensive settings system with UI
+  - Add "Settings" button to main screen (below File Manager)
+  - Create new Settings screen with LVGL controls:
+    - Brightness slider (0-100)
+    - Volume slider (0-100)
+    - Screen timeout dropdown (Never, 1, 5, 10, 15 minutes)
+    - File browser view mode (List/Grid/Detailed)
+    - Sort options (Name/Size/Date/Type)
+    - Show hidden files checkbox
+    - Theme selector (Dark/Light/Custom)
+    - Language dropdown
+    - SD auto-mount toggle
+  - Add "Backup Config to SD" button
+  - Add "Restore Config from SD" button
+  - Add "Reset to Defaults" button with confirmation
+  - Auto-save settings on change
+  - Apply settings immediately (brightness, theme, etc.)
+- **Success Criteria**: Functional Settings screen with immediate effect on user changes
 
 **Task 1.5: Firmware Unload/Eject Functionality**
 - **Files**: `main/firmware_loader.c`, `main/firmware_boot.c`, `main/gui_screen_main.c`

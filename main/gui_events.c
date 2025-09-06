@@ -2,6 +2,8 @@
 #include "gui_screens.h"
 #include "gui_progress.h"
 #include "gui_state.h"
+#include "gui_file_browser_v2.h"
+#include "gui_screen_settings.h"
 #include "firmware_loader.h"
 #include "sd_manager.h"
 #include "esp_log.h"
@@ -35,6 +37,10 @@ void main_menu_event_handler(lv_event_t *e) {
                 } else {
                     ESP_LOGW(TAG, "No firmware available to run");
                 }
+                break;
+            case 3: // Settings
+                create_settings_screen();
+                lv_screen_load(get_settings_screen());
                 break;
         }
     }
@@ -377,4 +383,51 @@ void mount_unmount_button_event_handler(lv_event_t *e) {
     
     // Refresh file list after mount/unmount
     update_file_list();
+}
+
+// File browser v2 event handlers
+void file_browser_v2_up_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+    
+    ESP_LOGI(TAG, "File browser v2: Up directory clicked");
+    gui_file_browser_v2_go_up();
+}
+
+void file_browser_v2_prev_page_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+    
+    ESP_LOGI(TAG, "File browser v2: Previous page clicked");
+    gui_file_browser_v2_prev_page();
+}
+
+void file_browser_v2_next_page_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+    
+    ESP_LOGI(TAG, "File browser v2: Next page clicked");
+    gui_file_browser_v2_next_page();
+}
+
+void file_browser_v2_item_click_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+    
+    int file_index = (int)(intptr_t)lv_event_get_user_data(e);
+    ESP_LOGI(TAG, "File browser v2: Item %d clicked", file_index);
+    
+    // TODO: Handle file/directory selection and navigation
+    // This will be implemented when we integrate with the existing file navigation
+}
+
+void file_browser_v2_multi_select_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_VALUE_CHANGED) return;
+    
+    lv_obj_t *btn = lv_event_get_target(e);
+    bool is_checked = lv_obj_has_state(btn, LV_STATE_CHECKED);
+    
+    ESP_LOGI(TAG, "File browser v2: Multi-select %s", is_checked ? "enabled" : "disabled");
+    gui_file_browser_v2_set_multi_select(is_checked);
 }

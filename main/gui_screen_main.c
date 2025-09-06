@@ -173,6 +173,17 @@ void create_main_screen(void) {
         lv_obj_add_state(run_fw_btn, LV_STATE_DISABLED);
     }
     lv_obj_center(run_fw_label);
+    
+    // Settings button - add below existing buttons
+    lv_obj_t *settings_btn = lv_button_create(center_container);
+    lv_obj_set_size(settings_btn, lv_pct(95), 85);
+    lv_obj_align(settings_btn, LV_ALIGN_CENTER, 0, 205);
+    apply_button_style(settings_btn);
+    lv_obj_add_event_cb(settings_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)3);
+    
+    lv_obj_t *settings_label = lv_label_create(settings_btn);
+    lv_label_set_text(settings_label, LV_SYMBOL_SETTINGS " Settings");
+    lv_obj_center(settings_label);
 }
 
 void update_status_bar(float voltage, float current_ma, bool charging) {

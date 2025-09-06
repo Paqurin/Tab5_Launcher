@@ -43,4 +43,13 @@ void format_button_event_handler(lv_event_t *e);
  */
 void mount_unmount_button_event_handler(lv_event_t *e);
 
+/**
+ * @brief File browser v2 navigation event handlers
+ */
+void file_browser_v2_up_event_handler(lv_event_t *e);
+void file_browser_v2_prev_page_handler(lv_event_t *e);
+void file_browser_v2_next_page_handler(lv_event_t *e);
+void file_browser_v2_item_click_handler(lv_event_t *e);
+void file_browser_v2_multi_select_handler(lv_event_t *e);
+
 #endif // GUI_EVENTS_H
