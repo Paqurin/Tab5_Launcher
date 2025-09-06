@@ -220,16 +220,15 @@ static void brightness_slider_event_handler(lv_event_t *e) {
 static void wifi_toggle_event_handler(lv_event_t *e) {
     gui_pulldown_menu_t *menu = (gui_pulldown_menu_t*)lv_event_get_user_data(e);
     
-    ESP_LOGI(TAG, "WiFi Tools button clicked - not yet implemented");
+    ESP_LOGI(TAG, "WiFi Tools button clicked - opening WiFi setup screen");
     
     // Hide the pulldown menu first
     if (menu) {
         gui_pulldown_menu_hide(menu);
     }
     
-    // TODO: WiFi screen needs wifi_manager.c implementation
-    // For now just log
-    ESP_LOGI(TAG, "WiFi setup screen not available - ESP32-P4 has no native WiFi");
+    // Show WiFi setup screen
+    create_wifi_setup_screen();
 }
 
 static void sd_toggle_event_handler(lv_event_t *e) {

@@ -18,3 +18,4 @@ dependencies:
   # Removed m5stack-tab5 managed component - using local component in ./components/ instead
   espressif/esp_lcd_ili9881c: '*'
 
+# espressif/esp_wifi_remote: '*' # Temporarily disabled due to ESP-IDF 5.4.1 compatibility issues
