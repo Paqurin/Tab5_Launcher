@@ -20,7 +20,7 @@ int firmware_loader_scan_firmware_files(const char *directory, firmware_info_t *
     }
     
     file_entry_t entries[32];
-    int entry_count = sd_manager_scan_directory(directory, entries, 32);
+    int entry_count = sd_manager_scan_directory(directory, entries, 32, false); // Don't show hidden files for firmware
     int firmware_count = 0;
     
     for (int i = 0; i < entry_count && firmware_count < max_count; i++) {

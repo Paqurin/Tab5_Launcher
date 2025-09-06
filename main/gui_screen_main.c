@@ -1,6 +1,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_pulldown_menu.h"
 #include "sd_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
@@ -10,6 +11,7 @@
 static const char *TAG = "GUI_MAIN";
 
 lv_obj_t *main_screen = NULL;
+static gui_pulldown_menu_t *pulldown_menu = NULL;
 
 static lv_obj_t *status_bar_voltage = NULL;
 static lv_obj_t *status_bar_voltage_unit = NULL;
@@ -17,6 +19,9 @@ static lv_obj_t *status_bar_current = NULL;
 static lv_obj_t *status_bar_current_unit = NULL;
 static lv_obj_t *status_bar_charging = NULL;
 static lv_obj_t *status_bar_sdcard = NULL;
+
+// Forward declaration for status bar click handler
+static void status_bar_click_handler(lv_event_t *e);
 
 void create_main_screen(void) {
     main_screen = lv_obj_create(NULL);
@@ -29,6 +34,10 @@ void create_main_screen(void) {
     lv_obj_set_style_bg_color(status_bar, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_opa(status_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(status_bar, 5, 0);
+    
+    // Make status bar clickable for pulldown menu
+    lv_obj_add_flag(status_bar, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(status_bar, status_bar_click_handler, LV_EVENT_CLICKED, NULL);
     
     // Add "Simplified Launcher" title to center of status bar
     lv_obj_t *status_title = lv_label_create(status_bar);
@@ -193,6 +202,20 @@ void create_main_screen(void) {
     lv_obj_t *settings_label = lv_label_create(settings_btn);
     lv_label_set_text(settings_label, LV_SYMBOL_SETTINGS " Settings");
     lv_obj_center(settings_label);
+    
+    // Create pulldown menu (initially hidden)
+    pulldown_menu = gui_pulldown_menu_create(main_screen);
+    if (!pulldown_menu) {
+        ESP_LOGE(TAG, "Failed to create pulldown menu");
+    }
+}
+
+// Status bar click handler to show pulldown menu
+static void status_bar_click_handler(lv_event_t *e) {
+    ESP_LOGI(TAG, "Status bar clicked - toggling pulldown menu");
+    if (pulldown_menu) {
+        gui_pulldown_menu_toggle(pulldown_menu);
+    }
 }
 
 void update_status_bar(float voltage, float current_ma, bool charging) {

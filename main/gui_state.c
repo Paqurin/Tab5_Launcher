@@ -8,6 +8,17 @@ firmware_info_t firmware_files[16];
 int firmware_count = 0;
 int selected_firmware = -1;
 
+// File selection state
+bool file_selection_enabled = false;
+bool selected_files[32] = {false};  // Initialize all to false
+int selected_file_count = 0;
+
+// Clipboard state
+bool clipboard_has_content = false;
+bool clipboard_is_cut = false;  // true for cut/move, false for copy
+char clipboard_files[32][256] = {0};  // Full paths of copied/cut files
+int clipboard_file_count = 0;
+
 // Progress state
 volatile bool progress_update_pending = false;
 volatile size_t pending_bytes_written = 0;

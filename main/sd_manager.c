@@ -50,7 +50,7 @@ esp_err_t sd_manager_deinit(void) {
     return ret;
 }
 
-int sd_manager_scan_directory(const char *path, file_entry_t *entries, int max_entries) {
+int sd_manager_scan_directory(const char *path, file_entry_t *entries, int max_entries, bool show_hidden) {
     if (!sd_mounted) {
         ESP_LOGE(TAG, "SD card not mounted");
         return -1;
@@ -69,8 +69,13 @@ int sd_manager_scan_directory(const char *path, file_entry_t *entries, int max_e
     int count = 0;
     
     while ((entry = readdir(dir)) != NULL && count < max_entries) {
-        // Skip hidden files and current/parent directory entries
-        if (entry->d_name[0] == '.') {
+        // Always skip current/parent directory entries
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        
+        // Skip hidden files if show_hidden is false
+        if (!show_hidden && entry->d_name[0] == '.') {
             continue;
         }
         

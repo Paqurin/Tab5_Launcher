@@ -11,6 +11,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
   VIOLATION CHECK: If you used TodoWrite first, you violated this rule. Stop and restart with Archon.
 
+# Agent Usage Guidelines
+
+This project includes specialized agents in the `agents/` directory. **ALWAYS use the appropriate agent for tasks that match their specialization:**
+
+## Available Agents
+
+### Engineering Agents
+- **rapid-prototyper**: Use for creating MVPs, prototypes, or proof-of-concepts
+- **backend-architect**: Use for API design, microservices, and database schemas
+- **frontend-developer**: Use for React components, UI implementation, and client-side state
+- **mobile-app-builder**: Use for React Native or mobile-specific features
+- **test-writer-fixer**: Use PROACTIVELY after code changes to ensure tests pass
+
+### Project Management Agents
+- **sprint-prioritizer**: Use for planning 6-day sprints and feature prioritization
+- **project-shipper**: Use PROACTIVELY for launch coordination and releases
+- **studio-producer**: Use for cross-team coordination and resource management
+- **experiment-tracker**: Use for A/B tests and feature experiments
+
+### Design & UX Agents
+- **ui-designer**: Use for interface design and component creation
+- **ux-researcher**: Use for user research and behavior analysis
+- **whimsy-injector**: Use PROACTIVELY after UI changes to add delightful touches
+- **visual-storyteller**: Use for creating visual narratives and presentations
+
+### Quality & Testing Agents
+- **test-results-analyzer**: Use for analyzing test results and quality metrics
+- **api-tester**: Use for comprehensive API testing including load testing
+- **performance-benchmarker**: Use for speed testing and optimization
+
+### Support & Operations Agents
+- **support-responder**: Use for customer support and documentation
+- **infrastructure-maintainer**: Use for system health and scaling
+- **devops-automator**: Use for CI/CD pipelines and deployments
+
+## Agent Usage Rules
+1. **PROACTIVE AGENTS**: Some agents (marked PROACTIVELY) should be used automatically when their conditions are met
+2. **TASK MATCHING**: Always use specialized agents when tasks match their description
+3. **PARALLEL EXECUTION**: Launch multiple agents concurrently when possible for performance
+4. **TRUST OUTPUT**: Agent outputs should generally be trusted as they are specialized for their domains
+
 # Archon Integration & Workflow
 
 **CRITICAL: This project uses Archon MCP server for knowledge management, task tracking, and project organization. ALWAYS start with Archon MCP server task management.**

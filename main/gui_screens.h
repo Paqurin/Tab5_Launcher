@@ -91,4 +91,9 @@ void update_firmware_status_bar(float voltage, float current_ma, bool charging);
  */
 void update_settings_status_bar(float voltage, float current_ma, bool charging);
 
+/**
+ * @brief Update toolbar button states based on file selection
+ */
+void update_toolbar_button_states(void);
+
 #endif // GUI_SCREENS_H

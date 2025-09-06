@@ -37,9 +37,10 @@ esp_err_t sd_manager_deinit(void);
  * @param path Directory path to scan (relative to SD root)
  * @param entries Array to store file entries
  * @param max_entries Maximum number of entries to return
+ * @param show_hidden Include hidden files (starting with '.')
  * @return Number of entries found, -1 on error
  */
-int sd_manager_scan_directory(const char *path, file_entry_t *entries, int max_entries);
+int sd_manager_scan_directory(const char *path, file_entry_t *entries, int max_entries, bool show_hidden);
 
 /**
  * @brief Check if file exists
