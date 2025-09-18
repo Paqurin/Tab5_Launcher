@@ -7,6 +7,7 @@
 #include "esp_partition.h"
 #include "hal.h"
 #include "sd_manager.h"
+#include "config_manager.h"
 #include "gui_manager.h"
 #include "gui_state.h"
 #include "firmware_loader.h"
@@ -52,10 +53,21 @@ void app_main(void) {
     hal_init();
     hal_touchpad_init();
     
-    // Initialize SD card
+    // Initialize configuration manager (SPIFFS)
+    ESP_LOGI(TAG, "Initializing configuration manager...");
+    if (config_manager_init() != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to initialize configuration manager - using defaults");
+    }
+    
+    // Initialize SD card (can be configured via config manager)
     ESP_LOGI(TAG, "Initializing SD card...");
-    if (sd_manager_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize SD card");
+    launcher_config_t *config = config_manager_get_current();
+    if (config->system.auto_mount_sd) {
+        if (sd_manager_init() != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to initialize SD card");
+        }
+    } else {
+        ESP_LOGI(TAG, "SD card auto-mount disabled in configuration");
     }
     
     // Initialize power monitor
@@ -128,10 +140,16 @@ void app_main(void) {
             
             ESP_LOGI(TAG, "Power readings: %.2fV, %.1fmA, charging: %s", voltage, current_ma, charging ? "yes" : "no");
             
-            // Only update if we're on the main screen
+            // Update status bars on all screens
             lv_obj_t *active_screen = lv_screen_active();
             if (active_screen == main_screen) {
                 update_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == file_manager_screen) {
+                update_file_manager_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == firmware_loader_screen) {
+                update_firmware_status_bar(voltage, current_ma, charging);
+            } else if (active_screen == settings_screen) {
+                update_settings_status_bar(voltage, current_ma, charging);
             }
         }
         

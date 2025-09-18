@@ -1,6 +1,8 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_pulldown_menu.h"
+#include "gui_screen_tools.h"
 #include "sd_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
@@ -10,6 +12,7 @@
 static const char *TAG = "GUI_MAIN";
 
 lv_obj_t *main_screen = NULL;
+static gui_pulldown_menu_t *pulldown_menu = NULL;
 
 static lv_obj_t *status_bar_voltage = NULL;
 static lv_obj_t *status_bar_voltage_unit = NULL;
@@ -17,6 +20,9 @@ static lv_obj_t *status_bar_current = NULL;
 static lv_obj_t *status_bar_current_unit = NULL;
 static lv_obj_t *status_bar_charging = NULL;
 static lv_obj_t *status_bar_sdcard = NULL;
+
+// Forward declaration for status bar click handler
+static void status_bar_click_handler(lv_event_t *e);
 
 void create_main_screen(void) {
     main_screen = lv_obj_create(NULL);
@@ -29,6 +35,17 @@ void create_main_screen(void) {
     lv_obj_set_style_bg_color(status_bar, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_opa(status_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(status_bar, 5, 0);
+    
+    // Make status bar clickable for pulldown menu
+    lv_obj_add_flag(status_bar, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(status_bar, status_bar_click_handler, LV_EVENT_CLICKED, NULL);
+    
+    // Add "Simplified Launcher" title to center of status bar
+    lv_obj_t *status_title = lv_label_create(status_bar);
+    lv_label_set_text(status_title, "Simplified Launcher");
+    lv_obj_set_style_text_color(status_title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(status_title, &lv_font_montserrat_20, 0);
+    lv_obj_align(status_title, LV_ALIGN_CENTER, 0, 0);
     
     // Create container for right-aligned status info
     lv_obj_t *status_container = lv_obj_create(status_bar);
@@ -114,55 +131,50 @@ void create_main_screen(void) {
     lv_obj_set_style_border_opa(center_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(center_container, 10, 0);
     
-    // Title
-    lv_obj_t *title = lv_label_create(center_container);
-    lv_label_set_text(title, "Simplified Launcher");
-    apply_title_style(title);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 20);
-    
-    // SD Card status
-    lv_obj_t *sd_status = lv_label_create(center_container);
-    if (sd_manager_is_mounted()) {
-        lv_label_set_text(sd_status, LV_SYMBOL_SD_CARD " SD Card: Mounted");
-        lv_obj_set_style_text_color(sd_status, THEME_SUCCESS_COLOR, 0);
-    } else {
-        lv_label_set_text(sd_status, LV_SYMBOL_SD_CARD " SD Card: Not Found");
-        lv_obj_set_style_text_color(sd_status, THEME_ERROR_COLOR, 0);
-    }
-    lv_obj_set_style_text_font(sd_status, THEME_FONT_NORMAL, 0);
-    lv_obj_align(sd_status, LV_ALIGN_TOP_MID, 0, 70);
     
     // File Manager button
     lv_obj_t *file_mgr_btn = lv_button_create(center_container);
-    lv_obj_set_size(file_mgr_btn, lv_pct(90), 70);
-    lv_obj_align(file_mgr_btn, LV_ALIGN_CENTER, 0, -70);
+    lv_obj_set_size(file_mgr_btn, lv_pct(95), 70);
+    lv_obj_align(file_mgr_btn, LV_ALIGN_CENTER, 0, -140);
     apply_button_style(file_mgr_btn);
     lv_obj_add_event_cb(file_mgr_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)0);
-    
+
     lv_obj_t *file_mgr_label = lv_label_create(file_mgr_btn);
     lv_label_set_text(file_mgr_label, LV_SYMBOL_DIRECTORY " File Manager");
     lv_obj_center(file_mgr_label);
-    
+
+    // Tools button - NEW with softer color
+    lv_obj_t *tools_btn = lv_button_create(center_container);
+    lv_obj_set_size(tools_btn, lv_pct(95), 70);
+    lv_obj_align(tools_btn, LV_ALIGN_CENTER, 0, -65);
+    apply_button_style(tools_btn);
+    lv_obj_set_style_bg_color(tools_btn, lv_color_hex(0x9b59b6), 0);  // Softer purple
+    lv_obj_add_event_cb(tools_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)5);
+
+    lv_obj_t *tools_label = lv_label_create(tools_btn);
+    lv_label_set_text(tools_label, LV_SYMBOL_SETTINGS " Tools");
+    lv_obj_center(tools_label);
+
     // Firmware Loader button
     lv_obj_t *fw_loader_btn = lv_button_create(center_container);
-    lv_obj_set_size(fw_loader_btn, lv_pct(90), 70);
+    lv_obj_set_size(fw_loader_btn, lv_pct(95), 70);
     lv_obj_align(fw_loader_btn, LV_ALIGN_CENTER, 0, 10);
     apply_button_style(fw_loader_btn);
     lv_obj_add_event_cb(fw_loader_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)1);
-    
+
     lv_obj_t *fw_loader_label = lv_label_create(fw_loader_btn);
     lv_label_set_text(fw_loader_label, LV_SYMBOL_DOWNLOAD " Firmware Loader");
     lv_obj_center(fw_loader_label);
     
     // Run Firmware button
     lv_obj_t *run_fw_btn = lv_button_create(center_container);
-    lv_obj_set_size(run_fw_btn, lv_pct(90), 70);
-    lv_obj_align(run_fw_btn, LV_ALIGN_CENTER, 0, 90);
+    lv_obj_set_size(run_fw_btn, lv_pct(95), 70);
+    lv_obj_align(run_fw_btn, LV_ALIGN_CENTER, 0, 85);
     apply_button_style(run_fw_btn);
     lv_obj_add_event_cb(run_fw_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)2);
-    
+
     lv_obj_t *run_fw_label = lv_label_create(run_fw_btn);
-    
+
     // Check if firmware is available
     if (firmware_loader_is_firmware_ready()) {
         lv_label_set_text(run_fw_label, LV_SYMBOL_PLAY " Run Firmware");
@@ -173,6 +185,89 @@ void create_main_screen(void) {
         lv_obj_add_state(run_fw_btn, LV_STATE_DISABLED);
     }
     lv_obj_center(run_fw_label);
+
+    // 4 Eject buttons in a row - SIMPLIFIED LAYOUT
+    lv_obj_t *eject_container = lv_obj_create(center_container);
+    lv_obj_set_size(eject_container, lv_pct(95), 70);
+    lv_obj_align(eject_container, LV_ALIGN_CENTER, 0, 160);
+    lv_obj_set_style_bg_opa(eject_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(eject_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(eject_container, 5, 0);
+    lv_obj_set_flex_flow(eject_container, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(eject_container, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Eject button data - SOFTER COLORS
+    struct {
+        const char *symbol;
+        const char *text;
+        lv_color_t color;
+        int event_id;
+    } eject_buttons[] = {
+        {LV_SYMBOL_EJECT, "Eject", lv_color_hex(0xe74c3c), 4},     // Softer red
+        {LV_SYMBOL_HOME, "Factory", lv_color_hex(0x3498db), 6},   // Softer blue
+        {LV_SYMBOL_SD_CARD, "To SD", lv_color_hex(0x2ecc71), 7},  // Softer green
+        {LV_SYMBOL_TRASH, "Clean", lv_color_hex(0xf39c12), 8}     // Softer orange
+    };
+
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t *eject_btn = lv_button_create(eject_container);
+        lv_obj_set_size(eject_btn, 85, 60);
+        apply_button_style(eject_btn);
+        lv_obj_set_style_bg_color(eject_btn, eject_buttons[i].color, 0);
+
+        // Simple label with symbol and text
+        lv_obj_t *btn_label = lv_label_create(eject_btn);
+        char label_text[32];
+        snprintf(label_text, sizeof(label_text), "%s\n%s", eject_buttons[i].symbol, eject_buttons[i].text);
+        lv_label_set_text(btn_label, label_text);
+        lv_obj_set_style_text_color(btn_label, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_text_font(btn_label, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_align(btn_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(btn_label);
+
+        // Disable factory button (index 1) completely
+        if (i == 1) { // Factory button - always disabled
+            lv_obj_add_state(eject_btn, LV_STATE_DISABLED);
+            lv_obj_set_style_bg_color(eject_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
+            lv_obj_set_style_text_color(btn_label, lv_color_hex(0x999999), LV_STATE_DISABLED);
+            // Don't add event callback for factory button
+        } else {
+            // Add event callback for non-factory buttons
+            lv_obj_add_event_cb(eject_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)eject_buttons[i].event_id);
+
+            // Disable if no firmware available for other applicable buttons
+            if (i < 3 && !firmware_loader_is_firmware_ready()) { // Eject, To SD need firmware
+                lv_obj_add_state(eject_btn, LV_STATE_DISABLED);
+                lv_obj_set_style_bg_color(eject_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
+                lv_obj_set_style_text_color(btn_label, lv_color_hex(0x999999), LV_STATE_DISABLED);
+            }
+        }
+    }
+    
+    // Settings button
+    lv_obj_t *settings_btn = lv_button_create(center_container);
+    lv_obj_set_size(settings_btn, lv_pct(95), 70);
+    lv_obj_align(settings_btn, LV_ALIGN_CENTER, 0, 235);
+    apply_button_style(settings_btn);
+    lv_obj_add_event_cb(settings_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)3);
+
+    lv_obj_t *settings_label = lv_label_create(settings_btn);
+    lv_label_set_text(settings_label, LV_SYMBOL_SETTINGS " Settings");
+    lv_obj_center(settings_label);
+    
+    // Create pulldown menu (initially hidden)
+    pulldown_menu = gui_pulldown_menu_create(main_screen);
+    if (!pulldown_menu) {
+        ESP_LOGE(TAG, "Failed to create pulldown menu");
+    }
+}
+
+// Status bar click handler to show pulldown menu
+static void status_bar_click_handler(lv_event_t *e) {
+    ESP_LOGI(TAG, "Status bar clicked - toggling pulldown menu");
+    if (pulldown_menu) {
+        gui_pulldown_menu_toggle(pulldown_menu);
+    }
 }
 
 void update_status_bar(float voltage, float current_ma, bool charging) {

@@ -43,4 +43,37 @@ void format_button_event_handler(lv_event_t *e);
  */
 void mount_unmount_button_event_handler(lv_event_t *e);
 
+/**
+ * @brief Directory up navigation event handler
+ */
+void directory_up_event_handler(lv_event_t *e);
+
+/**
+ * @brief File selection checkbox event handler
+ */
+void file_selection_event_handler(lv_event_t *e);
+
+/**
+ * @brief Toggle file selection mode event handler
+ */
+void toggle_selection_mode_event_handler(lv_event_t *e);
+
+/**
+ * @brief File operation event handlers
+ */
+void delete_files_event_handler(lv_event_t *e);
+void copy_files_event_handler(lv_event_t *e);
+void move_files_event_handler(lv_event_t *e);
+void paste_files_event_handler(lv_event_t *e);
+void rename_file_event_handler(lv_event_t *e);
+
+/**
+ * @brief File browser v2 navigation event handlers
+ */
+void file_browser_v2_up_event_handler(lv_event_t *e);
+void file_browser_v2_prev_page_handler(lv_event_t *e);
+void file_browser_v2_next_page_handler(lv_event_t *e);
+void file_browser_v2_item_click_handler(lv_event_t *e);
+void file_browser_v2_multi_select_handler(lv_event_t *e);
+
 #endif // GUI_EVENTS_H

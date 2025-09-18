@@ -9,6 +9,7 @@ extern lv_obj_t *file_manager_screen;
 extern lv_obj_t *firmware_loader_screen;
 extern lv_obj_t *progress_screen;
 extern lv_obj_t *splash_screen;
+extern lv_obj_t *settings_screen;
 
 // UI element objects
 extern lv_obj_t *file_list;
@@ -74,5 +75,25 @@ void update_main_screen(void);
  * @brief Update status bar with current voltage, current readings, and charging status
  */
 void update_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update file manager status bar
+ */
+void update_file_manager_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update firmware loader status bar
+ */
+void update_firmware_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update settings status bar
+ */
+void update_settings_status_bar(float voltage, float current_ma, bool charging);
+
+/**
+ * @brief Update toolbar button states based on file selection
+ */
+void update_toolbar_button_states(void);
 
 #endif // GUI_SCREENS_H
