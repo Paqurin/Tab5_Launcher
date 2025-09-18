@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_screen_python_launcher.h"
 #include "sd_manager.h"
 #include "esp_log.h"
 #include <string.h>
@@ -24,6 +25,7 @@ static void keyboard_event_handler(lv_event_t *e);
 static void save_button_event_handler(lv_event_t *e);
 static void close_button_event_handler(lv_event_t *e);
 static void keyboard_toggle_event_handler(lv_event_t *e);
+static void python_launch_button_event_handler(lv_event_t *e);
 static void toggle_keyboard(void);
 static void update_status(const char *message);
 
@@ -100,6 +102,18 @@ void create_text_editor_screen(void) {
     lv_obj_t *kb_label = lv_label_create(kb_btn);
     lv_label_set_text(kb_label, LV_SYMBOL_KEYBOARD);
     lv_obj_center(kb_label);
+
+    // Python launcher button (only show for .py files)
+    lv_obj_t *py_btn = lv_button_create(title_bar);
+    lv_obj_set_size(py_btn, 40, 35);
+    lv_obj_align(py_btn, LV_ALIGN_LEFT_MID, 140, 0);
+    apply_button_style(py_btn);
+    lv_obj_set_style_bg_color(py_btn, lv_color_hex(0x9b59b6), 0);
+    lv_obj_add_event_cb(py_btn, python_launch_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *py_label = lv_label_create(py_btn);
+    lv_label_set_text(py_label, LV_SYMBOL_PLAY);
+    lv_obj_center(py_label);
 
     // Title
     lv_obj_t *title_label = lv_label_create(title_bar);
@@ -279,8 +293,8 @@ void text_editor_close(void) {
     file_modified = false;
     keyboard_visible = false;
 
-    // Return to file manager or main screen
-    lv_screen_load(file_manager_screen ? file_manager_screen : main_screen);
+    // Return to main screen
+    lv_screen_load(main_screen);
     ESP_LOGI(TAG, "Text editor closed");
 }
 
@@ -349,5 +363,22 @@ static void keyboard_toggle_event_handler(lv_event_t *e) {
     if (code == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Keyboard toggle clicked");
         toggle_keyboard();
+    }
+}
+
+static void python_launch_button_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_CLICKED) {
+        ESP_LOGI(TAG, "Python launcher button clicked");
+
+        // Check if current file is a Python file
+        if (strlen(current_file_path) > 0 && python_launcher_is_supported_file(current_file_path)) {
+            ESP_LOGI(TAG, "Opening current Python file in launcher: %s", current_file_path);
+            show_python_launcher_screen();
+        } else {
+            ESP_LOGW(TAG, "Current file is not a Python file or no file loaded");
+            update_status("Not a Python file");
+        }
     }
 }

@@ -14,6 +14,7 @@ typedef struct {
     lv_obj_t *brightness_label;
     lv_obj_t *wifi_toggle;
     lv_obj_t *sd_toggle;
+    lv_obj_t *sd_label;
     lv_obj_t *close_btn;
     bool is_open;
     lv_anim_t slide_anim;

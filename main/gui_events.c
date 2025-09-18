@@ -19,6 +19,12 @@
 #include <sys/stat.h>
 #include <time.h>
 
+// Forward declarations for clean and eject handlers
+static void clean_cancel_event_handler(lv_event_t *e);
+static void clean_confirm_event_handler(lv_event_t *e);
+static void clean_result_close_event_handler(lv_event_t *e);
+static void eject_info_close_event_handler(lv_event_t *e);
+
 static const char *TAG = "GUI_EVENTS";
 
 // Helper function to clear file selections
@@ -38,6 +44,7 @@ typedef struct {
     int file_index;
 } rename_context_t;
 
+
 // Format functionality temporarily removed
 
 void main_menu_event_handler(lv_event_t *e) {
@@ -47,6 +54,7 @@ void main_menu_event_handler(lv_event_t *e) {
         switch (menu_id) {
             case 0: // File Manager
                 strcpy(current_directory, "/");  // Changed from "/sdcard" to "/"
+                update_file_manager_screen();
                 update_file_list();
                 lv_screen_load(file_manager_screen);
                 break;
@@ -73,13 +81,31 @@ void main_menu_event_handler(lv_event_t *e) {
                     if (ret == ESP_OK) {
                         ESP_LOGI(TAG, "✓ Firmware ejected successfully");
                         // Refresh the main screen to update button states
-                        create_main_screen();
+                        update_main_screen();
                         lv_screen_load(main_screen);
                     } else {
                         ESP_LOGE(TAG, "Failed to eject firmware: %s", esp_err_to_name(ret));
                     }
                 } else {
                     ESP_LOGW(TAG, "No firmware available to eject");
+                    // Show user feedback for no firmware
+                    lv_obj_t *info_mbox = lv_msgbox_create(lv_screen_active());
+                    lv_obj_t *info_text = lv_label_create(info_mbox);
+                    lv_label_set_text(info_text, "No Firmware\n\nNo firmware is currently loaded\nto eject.");
+                    lv_obj_set_style_text_color(info_text, lv_color_hex(0xFFBF00), 0);
+                    lv_obj_center(info_text);
+                    lv_obj_set_size(info_mbox, 300, 150);
+                    lv_obj_center(info_mbox);
+
+                    // Add close button
+                    lv_obj_t *close_btn = lv_button_create(info_mbox);
+                    lv_obj_set_size(close_btn, 80, 35);
+                    lv_obj_align(close_btn, LV_ALIGN_BOTTOM_MID, 0, -10);
+                    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x666666), 0);
+                    lv_obj_add_event_cb(close_btn, eject_info_close_event_handler, LV_EVENT_CLICKED, info_mbox);
+                    lv_obj_t *close_label = lv_label_create(close_btn);
+                    lv_label_set_text(close_label, "OK");
+                    lv_obj_center(close_label);
                 }
                 break;
             case 5: // Tools
@@ -136,9 +162,35 @@ void main_menu_event_handler(lv_event_t *e) {
                 lv_obj_t *clean_text = lv_label_create(clean_mbox);
                 lv_label_set_text(clean_text, "Force clean corrupted partition?\nThis will erase everything.");
                 lv_obj_center(clean_text);
-                lv_obj_set_size(clean_mbox, 300, 150);
+                lv_obj_set_size(clean_mbox, 300, 180);
                 lv_obj_center(clean_mbox);
-                // TODO: Add clean confirmation handler
+
+                // Create button container
+                lv_obj_t *btn_container = lv_obj_create(clean_mbox);
+                lv_obj_set_size(btn_container, lv_pct(90), 40);
+                lv_obj_align(btn_container, LV_ALIGN_BOTTOM_MID, 0, -10);
+                lv_obj_set_style_bg_opa(btn_container, LV_OPA_TRANSP, 0);
+                lv_obj_set_style_border_opa(btn_container, LV_OPA_TRANSP, 0);
+                lv_obj_set_flex_flow(btn_container, LV_FLEX_FLOW_ROW);
+                lv_obj_set_flex_align(btn_container, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+                // Cancel button
+                lv_obj_t *cancel_btn = lv_button_create(btn_container);
+                lv_obj_set_size(cancel_btn, 80, 35);
+                lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x666666), 0);
+                lv_obj_add_event_cb(cancel_btn, clean_cancel_event_handler, LV_EVENT_CLICKED, clean_mbox);
+                lv_obj_t *cancel_label = lv_label_create(cancel_btn);
+                lv_label_set_text(cancel_label, "Cancel");
+                lv_obj_center(cancel_label);
+
+                // Clean button
+                lv_obj_t *clean_btn = lv_button_create(btn_container);
+                lv_obj_set_size(clean_btn, 80, 35);
+                lv_obj_set_style_bg_color(clean_btn, lv_color_hex(0xFF5722), 0);
+                lv_obj_add_event_cb(clean_btn, clean_confirm_event_handler, LV_EVENT_CLICKED, clean_mbox);
+                lv_obj_t *clean_label = lv_label_create(clean_btn);
+                lv_label_set_text(clean_label, "Clean");
+                lv_obj_center(clean_label);
                 break;
         }
     }
@@ -1097,4 +1149,79 @@ static void file_open_choice_handler(lv_event_t *e) {
 
     // Clean up allocated path
     free(file_path);
+}
+
+// Clean partition confirmation handlers
+static void clean_cancel_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    lv_obj_t *msgbox = (lv_obj_t*)lv_event_get_user_data(e);
+    if (msgbox) {
+        lv_obj_del(msgbox);
+    }
+    ESP_LOGI("GUI_EVENTS", "Clean partition canceled");
+}
+
+static void clean_confirm_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    lv_obj_t *msgbox = (lv_obj_t*)lv_event_get_user_data(e);
+    if (msgbox) {
+        lv_obj_del(msgbox);
+    }
+
+    ESP_LOGI("GUI_EVENTS", "Performing force clean partition...");
+    esp_err_t ret = firmware_loader_clean_partition();
+
+    // Show result dialog
+    lv_obj_t *result_mbox = lv_msgbox_create(lv_screen_active());
+    lv_obj_t *result_text = lv_label_create(result_mbox);
+
+    if (ret == ESP_OK) {
+        lv_label_set_text(result_text, "Success\n\nPartition cleaned successfully.\nCorrupted data has been erased.");
+        lv_obj_set_style_text_color(result_text, lv_color_hex(0x4CAF50), 0);
+    } else {
+        char error_msg[200];
+        snprintf(error_msg, sizeof(error_msg), "Failed\n\nClean partition failed:\n%s", esp_err_to_name(ret));
+        lv_label_set_text(result_text, error_msg);
+        lv_obj_set_style_text_color(result_text, lv_color_hex(0xFF5722), 0);
+    }
+
+    lv_obj_center(result_text);
+    lv_obj_set_size(result_mbox, 300, 180);
+    lv_obj_center(result_mbox);
+
+    // Add close button
+    lv_obj_t *close_btn = lv_button_create(result_mbox);
+    lv_obj_set_size(close_btn, 80, 35);
+    lv_obj_align(close_btn, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x666666), 0);
+    lv_obj_add_event_cb(close_btn, clean_result_close_event_handler, LV_EVENT_CLICKED, result_mbox);
+    lv_obj_t *close_label = lv_label_create(close_btn);
+    lv_label_set_text(close_label, "OK");
+    lv_obj_center(close_label);
+}
+
+static void clean_result_close_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    lv_obj_t *msgbox = (lv_obj_t*)lv_event_get_user_data(e);
+    if (msgbox) {
+        lv_obj_del(msgbox);
+    }
+    ESP_LOGI("GUI_EVENTS", "Clean result dialog closed");
+}
+
+static void eject_info_close_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    lv_obj_t *msgbox = (lv_obj_t*)lv_event_get_user_data(e);
+    if (msgbox) {
+        lv_obj_del(msgbox);
+    }
+    ESP_LOGI("GUI_EVENTS", "Eject info dialog closed");
 }

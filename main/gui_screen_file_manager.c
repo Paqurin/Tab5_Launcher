@@ -343,3 +343,10 @@ void update_toolbar_button_states(void) {
         }
     }
 }
+
+void update_file_manager_screen(void) {
+    if (file_manager_screen) {
+        lv_obj_clean(file_manager_screen);
+        create_file_manager_screen();
+    }
+}

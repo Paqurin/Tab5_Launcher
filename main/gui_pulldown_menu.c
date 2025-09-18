@@ -37,8 +37,8 @@ gui_pulldown_menu_t* gui_pulldown_menu_create(lv_obj_t *parent) {
     
     // Create menu container (initially positioned above screen)
     menu->container = lv_obj_create(parent);
-    lv_obj_set_size(menu->container, lv_pct(100), 250);
-    lv_obj_set_pos(menu->container, 0, -250); // Start above screen
+    lv_obj_set_size(menu->container, lv_pct(100), 270);
+    lv_obj_set_pos(menu->container, 0, -270); // Start above screen
     lv_obj_set_style_bg_color(menu->container, lv_color_hex(0x2C2C2C), 0);
     lv_obj_set_style_border_opa(menu->container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_radius(menu->container, 0, 0);
@@ -99,13 +99,13 @@ gui_pulldown_menu_t* gui_pulldown_menu_create(lv_obj_t *parent) {
     // SD card toggle button
     menu->sd_toggle = lv_button_create(menu->container);
     lv_obj_set_size(menu->sd_toggle, lv_pct(90), 50);
-    lv_obj_align(menu->sd_toggle, LV_ALIGN_TOP_MID, 0, 185);
+    lv_obj_align(menu->sd_toggle, LV_ALIGN_TOP_MID, 0, 195);
     lv_obj_set_style_bg_color(menu->sd_toggle, sd_manager_is_mounted() ? lv_color_hex(0x4CAF50) : lv_color_hex(0x666666), 0);
     lv_obj_add_event_cb(menu->sd_toggle, sd_toggle_event_handler, LV_EVENT_CLICKED, menu);
     
-    lv_obj_t *sd_label = lv_label_create(menu->sd_toggle);
-    lv_label_set_text(sd_label, sd_manager_is_mounted() ? LV_SYMBOL_SD_CARD " Unmount SD" : LV_SYMBOL_SD_CARD " Mount SD");
-    lv_obj_center(sd_label);
+    menu->sd_label = lv_label_create(menu->sd_toggle);
+    lv_label_set_text(menu->sd_label, sd_manager_is_mounted() ? LV_SYMBOL_SD_CARD " Unmount SD" : LV_SYMBOL_SD_CARD " Mount SD");
+    lv_obj_center(menu->sd_label);
     
     menu->is_open = false;
     
@@ -132,24 +132,31 @@ static void slide_anim_cb(void *obj, int32_t value) {
 
 void gui_pulldown_menu_show(gui_pulldown_menu_t *menu) {
     if (!menu || menu->is_open) return;
-    
+
     ESP_LOGI(TAG, "Showing pull-down menu");
-    
+
+    // Update SD card button state before showing
+    if (menu->sd_label && menu->sd_toggle) {
+        bool is_mounted = sd_manager_is_mounted();
+        lv_label_set_text(menu->sd_label, is_mounted ? LV_SYMBOL_SD_CARD " Unmount SD" : LV_SYMBOL_SD_CARD " Mount SD");
+        lv_obj_set_style_bg_color(menu->sd_toggle, is_mounted ? lv_color_hex(0x4CAF50) : lv_color_hex(0x666666), 0);
+    }
+
     // Show backdrop first
     lv_obj_remove_flag(menu->backdrop, LV_OBJ_FLAG_HIDDEN);
-    
+
     // Show container
     lv_obj_remove_flag(menu->container, LV_OBJ_FLAG_HIDDEN);
-    
+
     // Animate slide down
     lv_anim_init(&menu->slide_anim);
     lv_anim_set_var(&menu->slide_anim, menu->container);
-    lv_anim_set_values(&menu->slide_anim, -250, 0);
+    lv_anim_set_values(&menu->slide_anim, -270, 0);
     lv_anim_set_time(&menu->slide_anim, 300);
     lv_anim_set_exec_cb(&menu->slide_anim, slide_anim_cb);
     lv_anim_set_path_cb(&menu->slide_anim, lv_anim_path_ease_out);
     lv_anim_start(&menu->slide_anim);
-    
+
     menu->is_open = true;
 }
 
@@ -170,7 +177,7 @@ void gui_pulldown_menu_hide(gui_pulldown_menu_t *menu) {
     // Animate slide up
     lv_anim_init(&menu->slide_anim);
     lv_anim_set_var(&menu->slide_anim, menu->container);
-    lv_anim_set_values(&menu->slide_anim, 0, -250);
+    lv_anim_set_values(&menu->slide_anim, 0, -270);
     lv_anim_set_time(&menu->slide_anim, 300);
     lv_anim_set_exec_cb(&menu->slide_anim, slide_anim_cb);
     lv_anim_set_path_cb(&menu->slide_anim, lv_anim_path_ease_in);
