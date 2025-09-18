@@ -382,3 +382,11 @@ static void python_launch_button_event_handler(lv_event_t *e) {
         }
     }
 }
+
+void destroy_text_editor_screen(void) {
+    if (text_editor_screen) {
+        lv_obj_del(text_editor_screen);
+        text_editor_screen = NULL;
+        ESP_LOGI(TAG, "Text editor screen destroyed");
+    }
+}

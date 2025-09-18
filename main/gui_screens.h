@@ -72,6 +72,11 @@ void update_firmware_list(void);
 void update_main_screen(void);
 
 /**
+ * @brief Update file manager screen display
+ */
+void update_file_manager_screen(void);
+
+/**
  * @brief Update status bar with current voltage, current readings, and charging status
  */
 void update_status_bar(float voltage, float current_ma, bool charging);
@@ -95,5 +100,35 @@ void update_settings_status_bar(float voltage, float current_ma, bool charging);
  * @brief Update toolbar button states based on file selection
  */
 void update_toolbar_button_states(void);
+
+/**
+ * @brief Destroy main screen and free memory
+ */
+void destroy_main_screen(void);
+
+/**
+ * @brief Destroy file manager screen and free memory
+ */
+void destroy_file_manager_screen(void);
+
+/**
+ * @brief Destroy firmware loader screen and free memory
+ */
+void destroy_firmware_loader_screen(void);
+
+/**
+ * @brief Destroy progress screen and free memory
+ */
+void destroy_progress_screen(void);
+
+/**
+ * @brief Destroy splash screen and free memory
+ */
+void destroy_splash_screen(void);
+
+/**
+ * @brief Destroy reboot dialog screen and free memory
+ */
+void destroy_reboot_dialog_screen(void);
 
 #endif // GUI_SCREENS_H

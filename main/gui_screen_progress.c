@@ -53,3 +53,11 @@ void create_progress_screen(void) {
     lv_obj_set_style_text_font(progress_step_label, THEME_FONT_NORMAL, 0);
     lv_obj_align(progress_step_label, LV_ALIGN_CENTER, 0, -50);
 }
+
+void destroy_progress_screen(void) {
+    if (progress_screen) {
+        lv_obj_del(progress_screen);
+        progress_screen = NULL;
+        ESP_LOGI(TAG, "Progress screen destroyed");
+    }
+}

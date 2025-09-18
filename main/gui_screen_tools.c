@@ -162,3 +162,11 @@ void tools_screen_back(void) {
     ESP_LOGI(TAG, "Returning to main screen");
     lv_screen_load(main_screen);
 }
+
+void destroy_tools_screen(void) {
+    if (tools_screen) {
+        lv_obj_del(tools_screen);
+        tools_screen = NULL;
+        ESP_LOGI(TAG, "Tools screen destroyed");
+    }
+}

@@ -11,6 +11,7 @@ extern lv_obj_t *python_launcher_screen;
 void create_python_launcher_screen(void);
 void show_python_launcher_screen(void);
 void python_launcher_screen_back(void);
+void destroy_python_launcher_screen(void);
 esp_err_t python_launcher_execute_script(const char *script_path);
 bool python_launcher_is_supported_file(const char *filename);
 

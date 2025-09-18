@@ -64,3 +64,11 @@ void create_splash_screen(void) {
     lv_label_set_text(launcher_label, LV_SYMBOL_SETTINGS " Enter Launcher");
     lv_obj_center(launcher_label);
 }
+
+void destroy_splash_screen(void) {
+    if (splash_screen) {
+        lv_obj_del(splash_screen);
+        splash_screen = NULL;
+        ESP_LOGI(TAG, "Splash screen destroyed");
+    }
+}

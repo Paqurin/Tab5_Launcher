@@ -131,3 +131,11 @@ void update_firmware_list(void) {
     
     lv_label_set_text(status_label, "Select a firmware file to flash");
 }
+
+void destroy_firmware_loader_screen(void) {
+    if (firmware_loader_screen) {
+        lv_obj_del(firmware_loader_screen);
+        firmware_loader_screen = NULL;
+        ESP_LOGI(TAG, "Firmware loader screen destroyed");
+    }
+}

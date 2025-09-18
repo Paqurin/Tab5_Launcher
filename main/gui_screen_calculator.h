@@ -10,5 +10,6 @@ extern lv_obj_t *calculator_screen;
 void create_calculator_screen(void);
 void show_calculator_screen(void);
 void calculator_screen_back(void);
+void destroy_calculator_screen(void);
 
 #endif // GUI_SCREEN_CALCULATOR_H

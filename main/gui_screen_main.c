@@ -365,3 +365,11 @@ void update_main_screen(void) {
         create_main_screen();
     }
 }
+
+void destroy_main_screen(void) {
+    if (main_screen) {
+        lv_obj_del(main_screen);
+        main_screen = NULL;
+        ESP_LOGI(TAG, "Main screen destroyed");
+    }
+}

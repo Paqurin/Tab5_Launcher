@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_screen_tools.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -214,6 +215,14 @@ void show_calculator_screen(void) {
 void calculator_screen_back(void) {
     ESP_LOGI(TAG, "Returning to tools screen");
     lv_screen_load(tools_screen);
+}
+
+void destroy_calculator_screen(void) {
+    if (calculator_screen) {
+        lv_obj_del(calculator_screen);
+        calculator_screen = NULL;
+        ESP_LOGI(TAG, "Calculator screen destroyed");
+    }
 }
 
 // Event handlers

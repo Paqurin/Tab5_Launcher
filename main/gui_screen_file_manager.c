@@ -350,3 +350,11 @@ void update_file_manager_screen(void) {
         create_file_manager_screen();
     }
 }
+
+void destroy_file_manager_screen(void) {
+    if (file_manager_screen) {
+        lv_obj_del(file_manager_screen);
+        file_manager_screen = NULL;
+        ESP_LOGI(TAG, "File manager screen destroyed");
+    }
+}

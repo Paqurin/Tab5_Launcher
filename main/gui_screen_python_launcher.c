@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_screen_tools.h"
 #include "sd_manager.h"
 #include "esp_log.h"
 #include <string.h>
@@ -207,6 +208,14 @@ void show_python_launcher_screen(void) {
 void python_launcher_screen_back(void) {
     ESP_LOGI(TAG, "Returning to tools screen");
     lv_screen_load(tools_screen);
+}
+
+void destroy_python_launcher_screen(void) {
+    if (python_launcher_screen) {
+        lv_obj_del(python_launcher_screen);
+        python_launcher_screen = NULL;
+        ESP_LOGI(TAG, "Python launcher screen destroyed");
+    }
 }
 
 // Event handlers

@@ -44,6 +44,11 @@ esp_err_t text_editor_save_file(void);
 void text_editor_close(void);
 
 /**
+ * @brief Destroy text editor screen and free memory
+ */
+void destroy_text_editor_screen(void);
+
+/**
  * @brief Get file type from extension
  * @param filename File name with extension
  * @return File type enum

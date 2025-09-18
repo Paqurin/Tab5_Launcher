@@ -22,4 +22,9 @@ void show_tools_screen(void);
  */
 void tools_screen_back(void);
 
+/**
+ * @brief Destroy tools screen and free memory
+ */
+void destroy_tools_screen(void);
+
 #endif // GUI_SCREEN_TOOLS_H

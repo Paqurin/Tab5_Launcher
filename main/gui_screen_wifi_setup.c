@@ -345,3 +345,11 @@ void wifi_setup_clear_password(void) {
         lv_textarea_set_text(wifi_password_textarea, "");
     }
 }
+
+void destroy_wifi_setup_screen(void) {
+    if (wifi_setup_screen) {
+        lv_obj_del(wifi_setup_screen);
+        wifi_setup_screen = NULL;
+        ESP_LOGI(TAG, "WiFi setup screen destroyed");
+    }
+}

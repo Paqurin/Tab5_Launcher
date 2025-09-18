@@ -56,3 +56,11 @@ void create_reboot_dialog_screen(void) {
     lv_label_set_text(back_label, LV_SYMBOL_HOME " Back to Launcher");
     lv_obj_center(back_label);
 }
+
+void destroy_reboot_dialog_screen(void) {
+    if (reboot_dialog_screen) {
+        lv_obj_del(reboot_dialog_screen);
+        reboot_dialog_screen = NULL;
+        ESP_LOGI(TAG, "Reboot dialog screen destroyed");
+    }
+}

@@ -41,4 +41,9 @@ void wifi_setup_show_password_input(bool show_password);
  */
 void wifi_setup_clear_password(void);
 
+/**
+ * @brief Destroy WiFi setup screen and free memory
+ */
+void destroy_wifi_setup_screen(void);
+
 #endif // GUI_SCREEN_WIFI_SETUP_H

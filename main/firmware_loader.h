@@ -93,4 +93,17 @@ esp_err_t firmware_loader_unload_firmware(void);
  */
 esp_err_t firmware_loader_get_firmware_info(esp_app_desc_t *app_desc);
 
+/**
+ * @brief Export currently loaded firmware to SD card
+ * @param export_path Path where to export the firmware on SD card
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t firmware_loader_export_to_sd(const char *export_path);
+
+/**
+ * @brief Clean/erase the OTA firmware partition
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t firmware_loader_clean_partition(void);
+
 #endif // FIRMWARE_LOADER_H
