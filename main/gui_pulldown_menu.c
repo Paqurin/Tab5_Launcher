@@ -1,9 +1,9 @@
 #include "gui_pulldown_menu.h"
 #include "gui_styles.h"
 #include "gui_screens.h"
-#include "gui_screen_wifi_setup.h"
 #include "sd_manager.h"
 #include "esp_log.h"
+#include "bsp/esp-bsp.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -13,7 +13,6 @@ static const char *TAG = "GUI_PULLDOWN";
 static void close_btn_event_handler(lv_event_t *e);
 static void backdrop_event_handler(lv_event_t *e);
 static void brightness_slider_event_handler(lv_event_t *e);
-static void wifi_toggle_event_handler(lv_event_t *e);
 static void sd_toggle_event_handler(lv_event_t *e);
 static void slide_anim_cb(void *obj, int32_t value);
 
@@ -84,16 +83,18 @@ gui_pulldown_menu_t* gui_pulldown_menu_create(lv_obj_t *parent) {
     lv_slider_set_value(menu->brightness_slider, 75, LV_ANIM_OFF);
     lv_obj_add_event_cb(menu->brightness_slider, brightness_slider_event_handler, LV_EVENT_VALUE_CHANGED, menu);
     
-    // WiFi toggle button
+    // Factory button (disabled placeholder)
     menu->wifi_toggle = lv_button_create(menu->container);
     lv_obj_set_size(menu->wifi_toggle, lv_pct(90), 50);
     lv_obj_align(menu->wifi_toggle, LV_ALIGN_TOP_MID, 0, 130);
-    lv_obj_set_style_bg_color(menu->wifi_toggle, lv_color_hex(0x4CAF50), 0);
-    lv_obj_add_event_cb(menu->wifi_toggle, wifi_toggle_event_handler, LV_EVENT_CLICKED, menu);
-    
-    lv_obj_t *wifi_label = lv_label_create(menu->wifi_toggle);
-    lv_label_set_text(wifi_label, LV_SYMBOL_WIFI " WiFi Tools");
-    lv_obj_center(wifi_label);
+    lv_obj_set_style_bg_color(menu->wifi_toggle, lv_color_hex(0x444444), 0);
+    lv_obj_add_state(menu->wifi_toggle, LV_STATE_DISABLED);
+    // Don't add event callback - completely disabled
+
+    lv_obj_t *factory_label = lv_label_create(menu->wifi_toggle);
+    lv_label_set_text(factory_label, LV_SYMBOL_REFRESH " Factory Reset (Disabled)");
+    lv_obj_set_style_text_color(factory_label, lv_color_hex(0x888888), 0);
+    lv_obj_center(factory_label);
     
     // SD card toggle button
     menu->sd_toggle = lv_button_create(menu->container);
@@ -208,29 +209,20 @@ static void backdrop_event_handler(lv_event_t *e) {
 static void brightness_slider_event_handler(lv_event_t *e) {
     gui_pulldown_menu_t *menu = (gui_pulldown_menu_t*)lv_event_get_user_data(e);
     int32_t value = lv_slider_get_value(menu->brightness_slider);
-    
+
     char buf[32];
     snprintf(buf, sizeof(buf), LV_SYMBOL_EYE_OPEN " Brightness: %ld%%", value);
     lv_label_set_text(menu->brightness_label, buf);
-    
-    // TODO: Actually set display brightness
-    ESP_LOGI(TAG, "Brightness set to %ld%%", value);
+
+    // Actually set display brightness
+    esp_err_t ret = bsp_display_brightness_set((uint8_t)value);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Brightness successfully set to %ld%%", value);
+    } else {
+        ESP_LOGE(TAG, "Failed to set brightness to %ld%%: %s", value, esp_err_to_name(ret));
+    }
 }
 
-static void wifi_toggle_event_handler(lv_event_t *e) {
-    gui_pulldown_menu_t *menu = (gui_pulldown_menu_t*)lv_event_get_user_data(e);
-    
-    ESP_LOGI(TAG, "WiFi Tools button clicked - not yet implemented");
-    
-    // Hide the pulldown menu first
-    if (menu) {
-        gui_pulldown_menu_hide(menu);
-    }
-    
-    // TODO: WiFi screen needs wifi_manager.c implementation
-    // For now just log
-    ESP_LOGI(TAG, "WiFi setup screen not available - ESP32-P4 has no native WiFi");
-}
 
 static void sd_toggle_event_handler(lv_event_t *e) {
     lv_obj_t *btn = lv_event_get_target(e);

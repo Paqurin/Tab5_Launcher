@@ -4,6 +4,10 @@
 #include "gui_state.h"
 #include "gui_file_browser_v2.h"
 #include "gui_screen_settings.h"
+#include "gui_screen_tools.h"
+#include "gui_screen_text_editor.h"
+#include "gui_screen_python_launcher.h"
+#include "gui_styles.h"
 #include "firmware_loader.h"
 #include "sd_manager.h"
 #include "file_operations.h"
@@ -13,6 +17,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <time.h>
 
 static const char *TAG = "GUI_EVENTS";
 
@@ -24,6 +29,7 @@ static void delete_confirmation_handler(lv_event_t *e);
 static void delete_cancel_handler(lv_event_t *e);
 static void rename_confirm_handler(lv_event_t *e);
 static void rename_cancel_handler(lv_event_t *e);
+static void file_open_choice_handler(lv_event_t *e);
 
 // Rename context structure
 typedef struct {
@@ -60,7 +66,7 @@ void main_menu_event_handler(lv_event_t *e) {
                 create_settings_screen();
                 lv_screen_load(get_settings_screen());
                 break;
-            case 4: // Eject Firmware
+            case 4: // Eject Firmware (standard)
                 if (firmware_loader_is_firmware_ready()) {
                     ESP_LOGI(TAG, "Ejecting firmware...");
                     esp_err_t ret = firmware_loader_unload_firmware();
@@ -71,11 +77,68 @@ void main_menu_event_handler(lv_event_t *e) {
                         lv_screen_load(main_screen);
                     } else {
                         ESP_LOGE(TAG, "Failed to eject firmware: %s", esp_err_to_name(ret));
-                        // Could add error dialog here in future
                     }
                 } else {
                     ESP_LOGW(TAG, "No firmware available to eject");
                 }
+                break;
+            case 5: // Tools
+                ESP_LOGI(TAG, "Opening Tools menu");
+                show_tools_screen();
+                break;
+            case 6: // Factory Reset
+                ESP_LOGI(TAG, "Factory reset requested");
+                lv_obj_t *factory_mbox = lv_msgbox_create(lv_screen_active());
+                lv_obj_t *title_text = lv_label_create(factory_mbox);
+                lv_label_set_text(title_text, "Factory Reset");
+                lv_obj_align(title_text, LV_ALIGN_TOP_MID, 0, 10);
+                lv_obj_t *msg_text = lv_label_create(factory_mbox);
+                lv_label_set_text(msg_text, "This will restore the launcher to\noriginal state. Continue?");
+                lv_obj_center(msg_text);
+                lv_obj_set_size(factory_mbox, 300, 150);
+                lv_obj_center(factory_mbox);
+                // TODO: Add factory reset confirmation handler
+                break;
+            case 7: // Export to SD
+                if (firmware_loader_is_firmware_ready()) {
+                    ESP_LOGI(TAG, "Exporting firmware to SD...");
+                    // Generate unique filename with timestamp
+                    char export_path[64];
+                    snprintf(export_path, sizeof(export_path), "/exported_firmware_%lu.bin", (unsigned long)time(NULL));
+                    esp_err_t ret = firmware_loader_export_to_sd(export_path);
+                    if (ret == ESP_OK) {
+                        ESP_LOGI(TAG, "✓ Firmware exported to: %s", export_path);
+                        lv_obj_t *export_mbox = lv_msgbox_create(lv_screen_active());
+                        lv_obj_t *export_text = lv_label_create(export_mbox);
+                        lv_label_set_text(export_text, "Export Complete\n\nFirmware exported to SD card!");
+                        lv_obj_center(export_text);
+                        lv_obj_set_size(export_mbox, 300, 120);
+                        lv_obj_center(export_mbox);
+                    } else {
+                        ESP_LOGE(TAG, "Failed to export firmware: %s", esp_err_to_name(ret));
+                        lv_obj_t *error_mbox = lv_msgbox_create(lv_screen_active());
+                        lv_obj_t *error_text = lv_label_create(error_mbox);
+                        lv_label_set_text(error_text, "Export Failed\n\nFailed to export firmware\nto SD card.");
+                        lv_obj_center(error_text);
+                        lv_obj_set_size(error_mbox, 300, 120);
+                        lv_obj_center(error_mbox);
+                    }
+                } else {
+                    ESP_LOGW(TAG, "No firmware available to export");
+                }
+                break;
+            case 8: // Clean Partition
+                ESP_LOGI(TAG, "Force cleaning partition...");
+                lv_obj_t *clean_mbox = lv_msgbox_create(lv_screen_active());
+                lv_obj_t *clean_title = lv_label_create(clean_mbox);
+                lv_label_set_text(clean_title, "Clean Partition");
+                lv_obj_align(clean_title, LV_ALIGN_TOP_MID, 0, 10);
+                lv_obj_t *clean_text = lv_label_create(clean_mbox);
+                lv_label_set_text(clean_text, "Force clean corrupted partition?\nThis will erase everything.");
+                lv_obj_center(clean_text);
+                lv_obj_set_size(clean_mbox, 300, 150);
+                lv_obj_center(clean_mbox);
+                // TODO: Add clean confirmation handler
                 break;
         }
     }
@@ -85,14 +148,14 @@ void file_list_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
         int index = (int)(uintptr_t)lv_event_get_user_data(e);
-        
+
         if (index >= 0 && index < current_entry_count) {
             if (current_entries[index].is_directory) {
                 // Navigate to directory
                 char temp_path[512];
                 size_t dir_len = strlen(current_directory);
                 size_t name_len = strlen(current_entries[index].name);
-                
+
                 // Check if the combined path would fit
                 if (dir_len + name_len + 2 < sizeof(temp_path)) {
                     if (strcmp(current_directory, "/") == 0) {  // Changed from "/sdcard" to "/"
@@ -105,7 +168,7 @@ void file_list_event_handler(lv_event_t *e) {
                         strcat(temp_path, "/");
                         strcat(temp_path, current_entries[index].name);
                     }
-                    
+
                     // Check if the path fits in current_directory
                     if (strlen(temp_path) < sizeof(current_directory)) {
                         strcpy(current_directory, temp_path);
@@ -117,6 +180,97 @@ void file_list_event_handler(lv_event_t *e) {
                     }
                 } else {
                     ESP_LOGW(TAG, "Directory path would be too long");
+                }
+            } else {
+                // Check if it's a supported file and determine available options
+                bool can_edit = text_editor_is_supported_file(current_entries[index].name);
+                bool can_run_python = python_launcher_is_supported_file(current_entries[index].name);
+
+                if (can_edit && can_run_python) {
+                    // File can be opened in both text editor and Python launcher - show choice dialog
+                    char full_path[1024];
+                    if (strcmp(current_directory, "/") == 0) {
+                        snprintf(full_path, sizeof(full_path), "/%s", current_entries[index].name);
+                    } else {
+                        snprintf(full_path, sizeof(full_path), "%s/%s",
+                                current_directory, current_entries[index].name);
+                    }
+
+                    // Create choice dialog
+                    lv_obj_t *msgbox = lv_msgbox_create(lv_screen_active());
+
+                    // Title
+                    lv_obj_t *title_text = lv_label_create(msgbox);
+                    lv_label_set_text(title_text, "Open File");
+                    lv_obj_set_style_text_font(title_text, &lv_font_montserrat_16, 0);
+                    lv_obj_align(title_text, LV_ALIGN_TOP_MID, 0, 10);
+
+                    // Message
+                    lv_obj_t *msg_text = lv_label_create(msgbox);
+                    char msg[128];
+                    snprintf(msg, sizeof(msg), "How would you like to open\n%s?", current_entries[index].name);
+                    lv_label_set_text(msg_text, msg);
+                    lv_obj_set_style_text_align(msg_text, LV_TEXT_ALIGN_CENTER, 0);
+                    lv_obj_align(msg_text, LV_ALIGN_CENTER, 0, -10);
+
+                    // Text Editor button
+                    lv_obj_t *edit_btn = lv_button_create(msgbox);
+                    lv_obj_set_size(edit_btn, 100, 40);
+                    lv_obj_align(edit_btn, LV_ALIGN_BOTTOM_LEFT, 20, -20);
+                    apply_button_style(edit_btn);
+                    lv_obj_set_style_bg_color(edit_btn, lv_color_hex(0x4ecdc4), 0);
+
+                    lv_obj_t *edit_label = lv_label_create(edit_btn);
+                    lv_label_set_text(edit_label, LV_SYMBOL_EDIT " Edit");
+                    lv_obj_center(edit_label);
+
+                    // Python Launcher button
+                    lv_obj_t *run_btn = lv_button_create(msgbox);
+                    lv_obj_set_size(run_btn, 100, 40);
+                    lv_obj_align(run_btn, LV_ALIGN_BOTTOM_RIGHT, -20, -20);
+                    apply_button_style(run_btn);
+                    lv_obj_set_style_bg_color(run_btn, lv_color_hex(0x3d5a80), 0);
+
+                    lv_obj_t *run_label = lv_label_create(run_btn);
+                    lv_label_set_text(run_label, LV_SYMBOL_PLAY " Run");
+                    lv_obj_center(run_label);
+
+                    // Store file path for button handlers
+                    char *path_copy = malloc(strlen(full_path) + 1);
+                    strcpy(path_copy, full_path);
+
+                    lv_obj_add_event_cb(edit_btn, file_open_choice_handler, LV_EVENT_CLICKED,
+                                       (void*)(uintptr_t)((int64_t)path_copy | 0x1)); // Edit choice
+                    lv_obj_add_event_cb(run_btn, file_open_choice_handler, LV_EVENT_CLICKED,
+                                       (void*)(uintptr_t)((int64_t)path_copy | 0x2)); // Run choice
+
+                    lv_obj_set_size(msgbox, 300, 200);
+                    lv_obj_center(msgbox);
+
+                } else if (can_edit) {
+                    // Only text editor available
+                    char full_path[1024];
+                    if (strcmp(current_directory, "/") == 0) {
+                        snprintf(full_path, sizeof(full_path), "/%s", current_entries[index].name);
+                    } else {
+                        snprintf(full_path, sizeof(full_path), "%s/%s",
+                                current_directory, current_entries[index].name);
+                    }
+
+                    ESP_LOGI(TAG, "Opening text file in editor: %s", full_path);
+                    create_text_editor_screen();
+                    esp_err_t ret = text_editor_open_file(full_path);
+                    if (ret == ESP_OK) {
+                        lv_screen_load(text_editor_screen);
+                    } else {
+                        ESP_LOGE(TAG, "Failed to open file in text editor: %s", esp_err_to_name(ret));
+                    }
+                } else if (can_run_python) {
+                    // Only Python launcher available
+                    ESP_LOGI(TAG, "Opening Python file in launcher: %s", current_entries[index].name);
+                    show_python_launcher_screen();
+                } else {
+                    ESP_LOGI(TAG, "File type not supported: %s", current_entries[index].name);
                 }
             }
         }
@@ -911,4 +1065,36 @@ static void rename_cancel_handler(lv_event_t *e) {
     lv_obj_del(ctx->msgbox);
     free(ctx);
     ESP_LOGI(TAG, "Rename cancelled");
+}
+
+static void file_open_choice_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    // Extract choice and file path from user data
+    uintptr_t data = (uintptr_t)lv_event_get_user_data(e);
+    int choice = data & 0x3; // Last 2 bits contain choice
+    char *file_path = (char*)(data & ~0x3); // Remove choice bits to get pointer
+
+    lv_obj_t *msgbox = lv_obj_get_parent(lv_obj_get_parent(lv_event_get_target(e)));
+    lv_obj_del(msgbox);
+
+    if (choice == 1) {
+        // Open in text editor
+        ESP_LOGI(TAG, "Opening file in text editor: %s", file_path);
+        create_text_editor_screen();
+        esp_err_t ret = text_editor_open_file(file_path);
+        if (ret == ESP_OK) {
+            lv_screen_load(text_editor_screen);
+        } else {
+            ESP_LOGE(TAG, "Failed to open file in text editor: %s", esp_err_to_name(ret));
+        }
+    } else if (choice == 2) {
+        // Open in Python launcher
+        ESP_LOGI(TAG, "Opening file in Python launcher: %s", file_path);
+        show_python_launcher_screen();
+    }
+
+    // Clean up allocated path
+    free(file_path);
 }
