@@ -7,3 +7,16 @@
 /Launcher-2.4.10/
 
 /M5Tab5-UserDemo-main/
+
+# Claude Code configuration (contains sensitive data)
+.claude/
+
+# Build artifacts and temporary files
+main/build/
+*.bin
+tab5serial*.txt
+firmware/
+agents/
+*.md
+!README.md
+!CLAUDE.md
