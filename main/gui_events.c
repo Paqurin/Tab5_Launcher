@@ -19,11 +19,19 @@
 #include <sys/stat.h>
 #include <time.h>
 
+// External screen references
+extern lv_obj_t *file_manager_screen;
+
 // Forward declarations for clean and eject handlers
 static void clean_cancel_event_handler(lv_event_t *e);
 static void clean_confirm_event_handler(lv_event_t *e);
 static void clean_result_close_event_handler(lv_event_t *e);
 static void eject_info_close_event_handler(lv_event_t *e);
+
+// Forward declarations for keyboard handlers
+static void textarea_focus_handler(lv_event_t *e);
+static void keyboard_ready_handler(lv_event_t *e);
+static void keyboard_cancel_handler(lv_event_t *e);
 
 static const char *TAG = "GUI_EVENTS";
 
@@ -41,6 +49,7 @@ static void file_open_choice_handler(lv_event_t *e);
 typedef struct {
     lv_obj_t *msgbox;
     lv_obj_t *textarea;
+    lv_obj_t *keyboard;
     int file_index;
 } rename_context_t;
 
@@ -234,9 +243,10 @@ void file_list_event_handler(lv_event_t *e) {
                     ESP_LOGW(TAG, "Directory path would be too long");
                 }
             } else {
-                // Check if it's a supported file and determine available options
-                bool can_edit = text_editor_is_supported_file(current_entries[index].name);
-                bool can_run_python = python_launcher_is_supported_file(current_entries[index].name);
+                // Check if it's a supported file and determine available options using file type detection
+                file_type_t file_type = file_ops_detect_type(current_entries[index].name);
+                bool can_edit = file_ops_is_editable(file_type);
+                bool can_run_python = (file_type == FILE_TYPE_PYTHON);
 
                 if (can_edit && can_run_python) {
                     // File can be opened in both text editor and Python launcher - show choice dialog
@@ -287,14 +297,17 @@ void file_list_event_handler(lv_event_t *e) {
                     lv_label_set_text(run_label, LV_SYMBOL_PLAY " Run");
                     lv_obj_center(run_label);
 
-                    // Store file path for button handlers
-                    char *path_copy = malloc(strlen(full_path) + 1);
-                    strcpy(path_copy, full_path);
+                    // Store file path for button handlers - use separate copies to avoid data corruption
+                    char *edit_path_copy = malloc(strlen(full_path) + 1);
+                    char *run_path_copy = malloc(strlen(full_path) + 1);
+                    strcpy(edit_path_copy, full_path);
+                    strcpy(run_path_copy, full_path);
 
+                    // Store choice in user data using different pointers
                     lv_obj_add_event_cb(edit_btn, file_open_choice_handler, LV_EVENT_CLICKED,
-                                       (void*)(uintptr_t)((int64_t)path_copy | 0x1)); // Edit choice
+                                       (void*)(uintptr_t)(((uintptr_t)edit_path_copy & ~0x3UL) | 0x1)); // Edit choice
                     lv_obj_add_event_cb(run_btn, file_open_choice_handler, LV_EVENT_CLICKED,
-                                       (void*)(uintptr_t)((int64_t)path_copy | 0x2)); // Run choice
+                                       (void*)(uintptr_t)(((uintptr_t)run_path_copy & ~0x3UL) | 0x2)); // Run choice
 
                     lv_obj_set_size(msgbox, 300, 200);
                     lv_obj_center(msgbox);
@@ -1059,12 +1072,30 @@ void rename_file_event_handler(lv_event_t *e) {
     ctx->msgbox = msgbox;
     ctx->textarea = ta;
     ctx->file_index = selected_idx;
-    
+
     lv_obj_add_event_cb(ok_btn, rename_confirm_handler, LV_EVENT_CLICKED, ctx);
     lv_obj_add_event_cb(cancel_btn, rename_cancel_handler, LV_EVENT_CLICKED, ctx);
-    
+
+    // Create keyboard for text input
+    lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
+    lv_keyboard_set_textarea(keyboard, ta);
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
+
+    // Add focus event to textarea to show keyboard
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_FOCUSED, keyboard);
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_DEFOCUSED, keyboard);
+
+    // Add keyboard events for rename context
+    lv_obj_add_event_cb(keyboard, keyboard_ready_handler, LV_EVENT_READY, ctx);
+    lv_obj_add_event_cb(keyboard, keyboard_cancel_handler, LV_EVENT_CANCEL, ctx);
+
+    // Store keyboard in context
+    ctx->keyboard = keyboard;
+
     lv_obj_set_size(msgbox, 300, 200);
-    lv_obj_center(msgbox);
+    lv_obj_align(msgbox, LV_ALIGN_CENTER, 0, -100); // Move up 100px to avoid keyboard
 }
 
 static void rename_confirm_handler(lv_event_t *e) {
@@ -1102,7 +1133,11 @@ static void rename_confirm_handler(lv_event_t *e) {
         ESP_LOGE(TAG, "Failed to rename: %s", old_path);
     }
     
-    // Clean up
+    // Clean up - hide keyboard first
+    if (ctx->keyboard) {
+        lv_obj_add_flag(ctx->keyboard, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_del(ctx->keyboard);
+    }
     lv_obj_del(ctx->msgbox);
     free(ctx);
     
@@ -1114,6 +1149,11 @@ static void rename_confirm_handler(lv_event_t *e) {
 
 static void rename_cancel_handler(lv_event_t *e) {
     rename_context_t *ctx = (rename_context_t*)lv_event_get_user_data(e);
+    // Hide and delete keyboard if it exists
+    if (ctx->keyboard) {
+        lv_obj_add_flag(ctx->keyboard, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_del(ctx->keyboard);
+    }
     lv_obj_del(ctx->msgbox);
     free(ctx);
     ESP_LOGI(TAG, "Rename cancelled");
@@ -1126,7 +1166,7 @@ static void file_open_choice_handler(lv_event_t *e) {
     // Extract choice and file path from user data
     uintptr_t data = (uintptr_t)lv_event_get_user_data(e);
     int choice = data & 0x3; // Last 2 bits contain choice
-    char *file_path = (char*)(data & ~0x3); // Remove choice bits to get pointer
+    char *file_path = (char*)(data & ~0x3UL); // Remove choice bits to get pointer
 
     lv_obj_t *msgbox = lv_obj_get_parent(lv_obj_get_parent(lv_event_get_target(e)));
     lv_obj_del(msgbox);
@@ -1224,4 +1264,423 @@ static void eject_info_close_event_handler(lv_event_t *e) {
         lv_obj_del(msgbox);
     }
     ESP_LOGI("GUI_EVENTS", "Eject info dialog closed");
+}
+
+// File/folder creation context structure
+typedef struct {
+    lv_obj_t *msgbox;
+    lv_obj_t *textarea;
+    lv_obj_t *keyboard;
+    bool is_folder;
+} create_context_t;
+
+// Forward declarations for creation handlers
+static void create_confirm_handler(lv_event_t *e);
+static void create_cancel_handler(lv_event_t *e);
+static void simple_dialog_close_handler(lv_event_t *e);
+
+void create_file_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    ESP_LOGI(TAG, "Create file dialog requested");
+
+    // Create file creation dialog
+    lv_obj_t *msgbox = lv_msgbox_create(lv_screen_active());
+
+    // Title
+    lv_obj_t *title = lv_label_create(msgbox);
+    lv_label_set_text(title, "Create New File");
+    lv_obj_set_style_text_font(title, THEME_FONT_MEDIUM, 0);
+    lv_obj_set_style_text_color(title, THEME_PRIMARY_COLOR, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 15);
+
+    // Instruction text
+    lv_obj_t *instruction = lv_label_create(msgbox);
+    lv_label_set_text(instruction, "Enter filename:");
+    lv_obj_set_style_text_color(instruction, THEME_TEXT_COLOR, 0);
+    lv_obj_align(instruction, LV_ALIGN_TOP_LEFT, 20, 50);
+
+    // Text area for filename input
+    lv_obj_t *ta = lv_textarea_create(msgbox);
+    lv_textarea_set_text(ta, "NewFile.txt");
+    lv_textarea_set_one_line(ta, true);
+    lv_obj_set_width(ta, 280);
+    lv_obj_set_height(ta, 50);
+    lv_obj_align(ta, LV_ALIGN_CENTER, 0, 0);
+
+    // Style the text area for touch-friendly usage
+    lv_obj_set_style_bg_color(ta, lv_color_hex(0x2a2a2a), 0);
+    lv_obj_set_style_border_color(ta, THEME_PRIMARY_COLOR, 0);
+    lv_obj_set_style_border_width(ta, 2, 0);
+    lv_obj_set_style_text_color(ta, THEME_TEXT_COLOR, 0);
+    lv_obj_set_style_radius(ta, 5, 0);
+    lv_obj_set_style_pad_all(ta, 8, 0);
+
+    // Create button
+    lv_obj_t *create_btn = lv_button_create(msgbox);
+    lv_obj_set_size(create_btn, 100, 45);
+    lv_obj_align(create_btn, LV_ALIGN_BOTTOM_LEFT, 30, -20);
+    apply_button_style(create_btn);
+    lv_obj_set_style_bg_color(create_btn, THEME_SUCCESS_COLOR, 0);
+    lv_obj_set_style_text_color(create_btn, THEME_BG_COLOR, 0);
+
+    lv_obj_t *create_label = lv_label_create(create_btn);
+    lv_label_set_text(create_label, LV_SYMBOL_PLUS " Create");
+    lv_obj_center(create_label);
+
+    // Cancel button
+    lv_obj_t *cancel_btn = lv_button_create(msgbox);
+    lv_obj_set_size(cancel_btn, 100, 45);
+    lv_obj_align(cancel_btn, LV_ALIGN_BOTTOM_RIGHT, -30, -20);
+    apply_button_style(cancel_btn);
+    lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x666666), 0);
+
+    lv_obj_t *cancel_label = lv_label_create(cancel_btn);
+    lv_label_set_text(cancel_label, LV_SYMBOL_CLOSE " Cancel");
+    lv_obj_center(cancel_label);
+
+    // Store context for the creation operation
+    create_context_t *ctx = malloc(sizeof(create_context_t));
+    ctx->msgbox = msgbox;
+    ctx->textarea = ta;
+    ctx->is_folder = false;
+
+    lv_obj_add_event_cb(create_btn, create_confirm_handler, LV_EVENT_CLICKED, ctx);
+    lv_obj_add_event_cb(cancel_btn, create_cancel_handler, LV_EVENT_CLICKED, ctx);
+
+    // Create keyboard for text input
+    lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
+    lv_keyboard_set_textarea(keyboard, ta);
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
+
+    // Add focus event to textarea to show keyboard
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_FOCUSED, keyboard);
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_DEFOCUSED, keyboard);
+
+    // Add keyboard events
+    lv_obj_add_event_cb(keyboard, keyboard_ready_handler, LV_EVENT_READY, ctx);
+    lv_obj_add_event_cb(keyboard, keyboard_cancel_handler, LV_EVENT_CANCEL, ctx);
+
+    // Store keyboard in context
+    ctx->keyboard = keyboard;
+
+    // Style and position the dialog higher for M5Stack Tab5 touch screen to avoid keyboard overlap
+    lv_obj_set_size(msgbox, 360, 220);
+    lv_obj_align(msgbox, LV_ALIGN_CENTER, 0, -100); // Move up 100px to avoid keyboard
+    lv_obj_set_style_bg_color(msgbox, lv_color_hex(0x1a1a1a), 0);
+    lv_obj_set_style_border_width(msgbox, 2, 0);
+    lv_obj_set_style_border_color(msgbox, THEME_PRIMARY_COLOR, 0);
+    lv_obj_set_style_radius(msgbox, 10, 0);
+}
+
+void create_folder_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED) return;
+
+    ESP_LOGI(TAG, "Create folder dialog requested");
+
+    // Create folder creation dialog
+    lv_obj_t *msgbox = lv_msgbox_create(lv_screen_active());
+
+    // Title
+    lv_obj_t *title = lv_label_create(msgbox);
+    lv_label_set_text(title, "Create New Folder");
+    lv_obj_set_style_text_font(title, THEME_FONT_MEDIUM, 0);
+    lv_obj_set_style_text_color(title, THEME_PRIMARY_COLOR, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 15);
+
+    // Instruction text
+    lv_obj_t *instruction = lv_label_create(msgbox);
+    lv_label_set_text(instruction, "Enter folder name:");
+    lv_obj_set_style_text_color(instruction, THEME_TEXT_COLOR, 0);
+    lv_obj_align(instruction, LV_ALIGN_TOP_LEFT, 20, 50);
+
+    // Text area for folder name input
+    lv_obj_t *ta = lv_textarea_create(msgbox);
+    lv_textarea_set_text(ta, "NewFolder");
+    lv_textarea_set_one_line(ta, true);
+    lv_obj_set_width(ta, 280);
+    lv_obj_set_height(ta, 50);
+    lv_obj_align(ta, LV_ALIGN_CENTER, 0, 0);
+
+    // Style the text area for touch-friendly usage
+    lv_obj_set_style_bg_color(ta, lv_color_hex(0x2a2a2a), 0);
+    lv_obj_set_style_border_color(ta, THEME_PRIMARY_COLOR, 0);
+    lv_obj_set_style_border_width(ta, 2, 0);
+    lv_obj_set_style_text_color(ta, THEME_TEXT_COLOR, 0);
+    lv_obj_set_style_radius(ta, 5, 0);
+    lv_obj_set_style_pad_all(ta, 8, 0);
+
+    // Create button
+    lv_obj_t *create_btn = lv_button_create(msgbox);
+    lv_obj_set_size(create_btn, 100, 45);
+    lv_obj_align(create_btn, LV_ALIGN_BOTTOM_LEFT, 30, -20);
+    apply_button_style(create_btn);
+    lv_obj_set_style_bg_color(create_btn, THEME_SUCCESS_COLOR, 0);
+    lv_obj_set_style_text_color(create_btn, THEME_BG_COLOR, 0);
+
+    lv_obj_t *create_label = lv_label_create(create_btn);
+    lv_label_set_text(create_label, LV_SYMBOL_DIRECTORY " Create");
+    lv_obj_center(create_label);
+
+    // Cancel button
+    lv_obj_t *cancel_btn = lv_button_create(msgbox);
+    lv_obj_set_size(cancel_btn, 100, 45);
+    lv_obj_align(cancel_btn, LV_ALIGN_BOTTOM_RIGHT, -30, -20);
+    apply_button_style(cancel_btn);
+    lv_obj_set_style_bg_color(cancel_btn, lv_color_hex(0x666666), 0);
+
+    lv_obj_t *cancel_label = lv_label_create(cancel_btn);
+    lv_label_set_text(cancel_label, LV_SYMBOL_CLOSE " Cancel");
+    lv_obj_center(cancel_label);
+
+    // Store context for the creation operation
+    create_context_t *ctx = malloc(sizeof(create_context_t));
+    ctx->msgbox = msgbox;
+    ctx->textarea = ta;
+    ctx->is_folder = true;
+
+    lv_obj_add_event_cb(create_btn, create_confirm_handler, LV_EVENT_CLICKED, ctx);
+    lv_obj_add_event_cb(cancel_btn, create_cancel_handler, LV_EVENT_CLICKED, ctx);
+
+    // Create keyboard for text input
+    lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
+    lv_keyboard_set_textarea(keyboard, ta);
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
+
+    // Add focus event to textarea to show keyboard
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_FOCUSED, keyboard);
+    lv_obj_add_event_cb(ta, textarea_focus_handler, LV_EVENT_DEFOCUSED, keyboard);
+
+    // Add keyboard events
+    lv_obj_add_event_cb(keyboard, keyboard_ready_handler, LV_EVENT_READY, ctx);
+    lv_obj_add_event_cb(keyboard, keyboard_cancel_handler, LV_EVENT_CANCEL, ctx);
+
+    // Store keyboard in context
+    ctx->keyboard = keyboard;
+
+    // Style and position the dialog higher for M5Stack Tab5 touch screen to avoid keyboard overlap
+    lv_obj_set_size(msgbox, 360, 220);
+    lv_obj_align(msgbox, LV_ALIGN_CENTER, 0, -100); // Move up 100px to avoid keyboard
+    lv_obj_set_style_bg_color(msgbox, lv_color_hex(0x1a1a1a), 0);
+    lv_obj_set_style_border_width(msgbox, 2, 0);
+    lv_obj_set_style_border_color(msgbox, THEME_PRIMARY_COLOR, 0);
+    lv_obj_set_style_radius(msgbox, 10, 0);
+}
+
+static void create_confirm_handler(lv_event_t *e) {
+    create_context_t *ctx = (create_context_t*)lv_event_get_user_data(e);
+
+    const char *name = lv_textarea_get_text(ctx->textarea);
+
+    // Validate the name
+    if (!file_ops_validate_filename(name)) {
+        ESP_LOGW(TAG, "Invalid filename: %s", name);
+
+        // Show error dialog
+        lv_obj_t *error_msgbox = lv_msgbox_create(lv_screen_active());
+        lv_obj_t *error_text = lv_label_create(error_msgbox);
+        lv_label_set_text(error_text, "Invalid Name\n\nName contains forbidden characters\nor is too long. Please use only\nletters, numbers, and basic\npunctuation.");
+        lv_obj_set_style_text_color(error_text, THEME_ERROR_COLOR, 0);
+        lv_obj_set_style_text_align(error_text, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(error_text);
+
+        lv_obj_t *ok_btn = lv_button_create(error_msgbox);
+        lv_obj_set_size(ok_btn, 80, 35);
+        lv_obj_align(ok_btn, LV_ALIGN_BOTTOM_MID, 0, -15);
+        apply_button_style(ok_btn);
+        lv_obj_add_event_cb(ok_btn, simple_dialog_close_handler, LV_EVENT_CLICKED, error_msgbox);
+
+        lv_obj_t *ok_label = lv_label_create(ok_btn);
+        lv_label_set_text(ok_label, "OK");
+        lv_obj_center(ok_label);
+
+        lv_obj_set_size(error_msgbox, 320, 180);
+        lv_obj_center(error_msgbox);
+        lv_obj_set_style_bg_color(error_msgbox, lv_color_hex(0x1a1a1a), 0);
+        lv_obj_set_style_border_color(error_msgbox, THEME_ERROR_COLOR, 0);
+        return;
+    }
+
+    // Build the full path - using larger buffer and length checks
+    char full_path[1024];
+    if (strcmp(current_directory, "/") == 0) {
+        snprintf(full_path, sizeof(full_path), "/%s", name);
+    } else {
+        // Check if path would be too long before formatting
+        size_t dir_len = strlen(current_directory);
+        size_t name_len = strlen(name);
+        if (dir_len + name_len + 2 >= sizeof(full_path)) {
+            ESP_LOGE(TAG, "Path too long: %s/%s", current_directory, name);
+            lv_obj_del(ctx->msgbox);
+            free(ctx);
+            return;
+        }
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wformat-truncation"
+        snprintf(full_path, sizeof(full_path), "%s/%s", current_directory, name);
+        #pragma GCC diagnostic pop
+    }
+
+    // Create the file or folder
+    esp_err_t ret;
+    if (ctx->is_folder) {
+        ret = file_ops_create_directory(full_path);
+    } else {
+        ret = file_ops_create_file(full_path);
+    }
+
+    // Close the creation dialog and hide keyboard
+    if (ctx->keyboard) {
+        lv_obj_add_flag(ctx->keyboard, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_del(ctx->keyboard);
+    }
+    lv_obj_del(ctx->msgbox);
+
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Created %s: %s", ctx->is_folder ? "folder" : "file", full_path);
+
+        // Show success message
+        lv_obj_t *success_msgbox = lv_msgbox_create(lv_screen_active());
+        lv_obj_t *success_text = lv_label_create(success_msgbox);
+        char success_msg[256];
+        snprintf(success_msg, sizeof(success_msg), "%s Created\n\n%s '%s' created successfully!",
+                ctx->is_folder ? "Folder" : "File", ctx->is_folder ? "Folder" : "File", name);
+        lv_label_set_text(success_text, success_msg);
+        lv_obj_set_style_text_color(success_text, THEME_SUCCESS_COLOR, 0);
+        lv_obj_set_style_text_align(success_text, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(success_text);
+
+        lv_obj_t *ok_btn = lv_button_create(success_msgbox);
+        lv_obj_set_size(ok_btn, 80, 35);
+        lv_obj_align(ok_btn, LV_ALIGN_BOTTOM_MID, 0, -15);
+        apply_button_style(ok_btn);
+        lv_obj_add_event_cb(ok_btn, simple_dialog_close_handler, LV_EVENT_CLICKED, success_msgbox);
+
+        lv_obj_t *ok_label = lv_label_create(ok_btn);
+        lv_label_set_text(ok_label, "OK");
+        lv_obj_center(ok_label);
+
+        lv_obj_set_size(success_msgbox, 300, 150);
+        lv_obj_center(success_msgbox);
+        lv_obj_set_style_bg_color(success_msgbox, lv_color_hex(0x1a1a1a), 0);
+        lv_obj_set_style_border_color(success_msgbox, THEME_SUCCESS_COLOR, 0);
+
+        // CRITICAL FIX: Don't update file list immediately - causes stack corruption
+        // The file list will be updated when the user closes this dialog or navigates away
+    } else {
+        ESP_LOGE(TAG, "Failed to create %s: %s", ctx->is_folder ? "folder" : "file", full_path);
+
+        // Show error dialog
+        lv_obj_t *error_msgbox = lv_msgbox_create(lv_screen_active());
+        lv_obj_t *error_text = lv_label_create(error_msgbox);
+        char error_msg[256];
+        if (ret == ESP_ERR_INVALID_STATE) {
+            snprintf(error_msg, sizeof(error_msg), "Creation Failed\n\n%s already exists or\nSD card error.",
+                    ctx->is_folder ? "Folder" : "File");
+        } else {
+            snprintf(error_msg, sizeof(error_msg), "Creation Failed\n\nUnable to create %s.\nCheck SD card permissions.",
+                    ctx->is_folder ? "folder" : "file");
+        }
+        lv_label_set_text(error_text, error_msg);
+        lv_obj_set_style_text_color(error_text, THEME_ERROR_COLOR, 0);
+        lv_obj_set_style_text_align(error_text, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(error_text);
+
+        lv_obj_t *ok_btn = lv_button_create(error_msgbox);
+        lv_obj_set_size(ok_btn, 80, 35);
+        lv_obj_align(ok_btn, LV_ALIGN_BOTTOM_MID, 0, -15);
+        apply_button_style(ok_btn);
+        lv_obj_add_event_cb(ok_btn, simple_dialog_close_handler, LV_EVENT_CLICKED, error_msgbox);
+
+        lv_obj_t *ok_label = lv_label_create(ok_btn);
+        lv_label_set_text(ok_label, "OK");
+        lv_obj_center(ok_label);
+
+        lv_obj_set_size(error_msgbox, 300, 160);
+        lv_obj_center(error_msgbox);
+        lv_obj_set_style_bg_color(error_msgbox, lv_color_hex(0x1a1a1a), 0);
+        lv_obj_set_style_border_color(error_msgbox, THEME_ERROR_COLOR, 0);
+    }
+
+    // Clean up
+    free(ctx);
+}
+
+static void create_cancel_handler(lv_event_t *e) {
+    create_context_t *ctx = (create_context_t*)lv_event_get_user_data(e);
+    if (ctx) {
+        ESP_LOGI(TAG, "Closing creation dialog with context cleanup");
+        // Hide and delete keyboard if it exists
+        if (ctx->keyboard && lv_obj_is_valid(ctx->keyboard)) {
+            lv_obj_add_flag(ctx->keyboard, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_del(ctx->keyboard);
+        }
+        if (ctx->msgbox && lv_obj_is_valid(ctx->msgbox)) {
+            lv_obj_del(ctx->msgbox);
+        }
+        free(ctx);
+    }
+}
+
+static void simple_dialog_close_handler(lv_event_t *e) {
+    lv_obj_t *msgbox = (lv_obj_t*)lv_event_get_user_data(e);
+    if (msgbox && lv_obj_is_valid(msgbox)) {
+        ESP_LOGI(TAG, "Closing simple dialog");
+        lv_obj_del(msgbox);
+
+        // Update file list after dialog is closed to show any new files
+        // This is safe to do here since the dialog cleanup is complete
+        if (lv_screen_active() == file_manager_screen) {
+            ESP_LOGI(TAG, "Refreshing file list after dialog close");
+            update_file_list();
+        }
+    }
+}
+
+// Keyboard event handlers for text input dialogs
+static void textarea_focus_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *keyboard = (lv_obj_t*)lv_event_get_user_data(e);
+
+    if (code == LV_EVENT_FOCUSED) {
+        // Show keyboard when textarea is focused
+        if (keyboard) {
+            lv_obj_remove_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+            ESP_LOGI(TAG, "Keyboard shown for text input");
+        }
+    } else if (code == LV_EVENT_DEFOCUSED) {
+        // Hide keyboard when textarea loses focus
+        if (keyboard) {
+            lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+            ESP_LOGI(TAG, "Keyboard hidden after losing focus");
+        }
+    }
+}
+
+static void keyboard_ready_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_READY) {
+        // User pressed "OK" on keyboard - hide keyboard
+        ESP_LOGI(TAG, "Keyboard OK pressed, hiding keyboard");
+
+        // Hide the keyboard
+        lv_obj_t *keyboard = lv_event_get_target(e);
+        lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static void keyboard_cancel_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CANCEL) {
+        // User pressed "Cancel" on keyboard - hide keyboard
+        lv_obj_t *keyboard = lv_event_get_target(e);
+        lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+        ESP_LOGI(TAG, "Keyboard cancelled, hiding keyboard");
+    }
 }

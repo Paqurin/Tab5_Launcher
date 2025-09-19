@@ -68,6 +68,12 @@ void paste_files_event_handler(lv_event_t *e);
 void rename_file_event_handler(lv_event_t *e);
 
 /**
+ * @brief File/folder creation event handlers
+ */
+void create_file_event_handler(lv_event_t *e);
+void create_folder_event_handler(lv_event_t *e);
+
+/**
  * @brief File browser v2 navigation event handlers
  */
 void file_browser_v2_up_event_handler(lv_event_t *e);

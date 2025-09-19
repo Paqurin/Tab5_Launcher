@@ -25,10 +25,10 @@ esp_err_t file_ops_create_directory(const char *path) {
         ESP_LOGE(TAG, "SD card not mounted");
         return ESP_ERR_INVALID_STATE;
     }
-    
+
     char full_path[MAX_PATH_LENGTH];
     snprintf(full_path, sizeof(full_path), "%s%s", SD_MOUNT_POINT, path);
-    
+
     if (mkdir(full_path, 0755) == 0) {
         ESP_LOGI(TAG, "Directory created: %s", full_path);
         return ESP_OK;
@@ -36,6 +36,79 @@ esp_err_t file_ops_create_directory(const char *path) {
         ESP_LOGE(TAG, "Failed to create directory: %s (errno: %d)", full_path, errno);
         return ESP_FAIL;
     }
+}
+
+esp_err_t file_ops_create_file(const char *path) {
+    if (!sd_manager_is_mounted()) {
+        ESP_LOGE(TAG, "SD card not mounted");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    char full_path[MAX_PATH_LENGTH];
+    snprintf(full_path, sizeof(full_path), "%s%s", SD_MOUNT_POINT, path);
+
+    // Check if file already exists
+    struct stat file_stat;
+    if (stat(full_path, &file_stat) == 0) {
+        ESP_LOGE(TAG, "File already exists: %s", full_path);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    FILE *file = fopen(full_path, "w");
+    if (file) {
+        fclose(file);
+        ESP_LOGI(TAG, "File created: %s", full_path);
+        return ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "Failed to create file: %s (errno: %d)", full_path, errno);
+        return ESP_FAIL;
+    }
+}
+
+bool file_ops_validate_filename(const char *name) {
+    if (!name || strlen(name) == 0) {
+        return false;
+    }
+
+    // Check length (reasonable limit for embedded systems)
+    if (strlen(name) > 64) {
+        return false;
+    }
+
+    // Check for forbidden characters in FAT32 filenames
+    const char *forbidden_chars = "<>:\"/|?*";
+    for (size_t i = 0; i < strlen(name); i++) {
+        char c = name[i];
+        // Check for control characters (0-31)
+        if (c < 32) {
+            return false;
+        }
+        // Check for forbidden characters
+        if (strchr(forbidden_chars, c) != NULL) {
+            return false;
+        }
+    }
+
+    // Check for reserved names (DOS/Windows legacy)
+    const char *reserved_names[] = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
+    for (size_t i = 0; i < sizeof(reserved_names) / sizeof(reserved_names[0]); i++) {
+        if (strcasecmp(name, reserved_names[i]) == 0) {
+            return false;
+        }
+    }
+
+    // Check for names ending with spaces or dots (Windows limitation)
+    size_t len = strlen(name);
+    if (name[len - 1] == ' ' || name[len - 1] == '.') {
+        return false;
+    }
+
+    return true;
 }
 
 esp_err_t file_ops_delete_file(const char *path) {
@@ -374,6 +447,108 @@ esp_err_t file_ops_get_file_info(const char *path, file_info_t *info) {
             info->type = FILE_TYPE_OTHER;
         }
     }
-    
+
     return ESP_OK;
+}
+
+// File type detection function that reuses the existing logic
+file_type_t file_ops_detect_type(const char *filename) {
+    if (!filename) {
+        return FILE_TYPE_OTHER;
+    }
+
+    const char *ext = strrchr(filename, '.');
+    if (!ext) {
+        return FILE_TYPE_OTHER; // No extension
+    }
+
+    ext++; // Skip the dot
+
+    if (strcasecmp(ext, "bin") == 0) {
+        return FILE_TYPE_BINARY;
+    } else if (strcasecmp(ext, "txt") == 0 || strcasecmp(ext, "cfg") == 0 ||
+               strcasecmp(ext, "conf") == 0 || strcasecmp(ext, "json") == 0) {
+        return FILE_TYPE_TEXT;
+    } else if (strcasecmp(ext, "py") == 0) {
+        return FILE_TYPE_PYTHON;
+    } else if (strcasecmp(ext, "html") == 0 || strcasecmp(ext, "css") == 0 ||
+               strcasecmp(ext, "js") == 0) {
+        return FILE_TYPE_WEB;
+    } else if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0 ||
+               strcasecmp(ext, "png") == 0 || strcasecmp(ext, "bmp") == 0) {
+        return FILE_TYPE_IMAGE;
+    } else {
+        return FILE_TYPE_OTHER;
+    }
+}
+
+const char* file_ops_get_icon(file_type_t type) {
+    switch (type) {
+        case FILE_TYPE_DIRECTORY:
+            return LV_SYMBOL_DIRECTORY;
+        case FILE_TYPE_BINARY:
+            return LV_SYMBOL_SETTINGS;  // Firmware/binary files
+        case FILE_TYPE_TEXT:
+            return LV_SYMBOL_FILE;      // Text files
+        case FILE_TYPE_PYTHON:
+            return LV_SYMBOL_PLAY;      // Python scripts (executable)
+        case FILE_TYPE_WEB:
+            return LV_SYMBOL_FILE;      // Web files
+        case FILE_TYPE_IMAGE:
+            return LV_SYMBOL_IMAGE;     // Image files
+        case FILE_TYPE_OTHER:
+        default:
+            return LV_SYMBOL_FILE;      // Default file icon
+    }
+}
+
+const char* file_ops_get_icon_by_filename(const char *filename) {
+    file_type_t type = file_ops_detect_type(filename);
+    return file_ops_get_icon(type);
+}
+
+const char* file_ops_get_description(file_type_t type) {
+    switch (type) {
+        case FILE_TYPE_DIRECTORY:
+            return "Folder";
+        case FILE_TYPE_BINARY:
+            return "Firmware";
+        case FILE_TYPE_TEXT:
+            return "Text";
+        case FILE_TYPE_PYTHON:
+            return "Python";
+        case FILE_TYPE_WEB:
+            return "Web";
+        case FILE_TYPE_IMAGE:
+            return "Image";
+        case FILE_TYPE_OTHER:
+        default:
+            return "File";
+    }
+}
+
+const char* file_ops_get_description_by_filename(const char *filename) {
+    file_type_t type = file_ops_detect_type(filename);
+    return file_ops_get_description(type);
+}
+
+bool file_ops_is_editable(file_type_t type) {
+    switch (type) {
+        case FILE_TYPE_TEXT:
+        case FILE_TYPE_PYTHON:
+        case FILE_TYPE_WEB:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool file_ops_is_executable(file_type_t type) {
+    switch (type) {
+        case FILE_TYPE_BINARY:
+        case FILE_TYPE_PYTHON:
+            return true;
+        default:
+            return false;
+    }
 }

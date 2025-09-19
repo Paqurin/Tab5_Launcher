@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <time.h>
+#include "lvgl.h"
 
 // File type enumeration for icon display
 typedef enum {
@@ -32,6 +33,20 @@ typedef struct {
  * @return ESP_OK on success
  */
 esp_err_t file_ops_create_directory(const char *path);
+
+/**
+ * @brief Create a new empty file
+ * @param path File path (relative to SD root)
+ * @return ESP_OK on success
+ */
+esp_err_t file_ops_create_file(const char *path);
+
+/**
+ * @brief Validate filename for forbidden characters and length
+ * @param name Filename to validate
+ * @return true if valid, false otherwise
+ */
+bool file_ops_validate_filename(const char *name);
 
 /**
  * @brief Delete a file
@@ -105,5 +120,54 @@ const char* file_ops_get_clipboard_path(void);
  * @return ESP_OK on success
  */
 esp_err_t file_ops_get_file_info(const char *path, file_info_t *info);
+
+/**
+ * @brief Detect file type from filename extension
+ * @param filename Full filename with extension
+ * @return File type enum
+ */
+file_type_t file_ops_detect_type(const char *filename);
+
+/**
+ * @brief Get LVGL icon symbol for file type
+ * @param type File type enum
+ * @return LVGL symbol string
+ */
+const char* file_ops_get_icon(file_type_t type);
+
+/**
+ * @brief Get icon symbol directly from filename
+ * @param filename Full filename with extension
+ * @return LVGL symbol string
+ */
+const char* file_ops_get_icon_by_filename(const char *filename);
+
+/**
+ * @brief Get human-readable description for file type
+ * @param type File type enum
+ * @return Description string
+ */
+const char* file_ops_get_description(file_type_t type);
+
+/**
+ * @brief Get description directly from filename
+ * @param filename Full filename with extension
+ * @return Description string
+ */
+const char* file_ops_get_description_by_filename(const char *filename);
+
+/**
+ * @brief Check if file type is editable in text editor
+ * @param type File type enum
+ * @return true if editable, false otherwise
+ */
+bool file_ops_is_editable(file_type_t type);
+
+/**
+ * @brief Check if file type is executable (firmware/scripts)
+ * @param type File type enum
+ * @return true if executable, false otherwise
+ */
+bool file_ops_is_executable(file_type_t type);
 
 #endif // FILE_OPERATIONS_H

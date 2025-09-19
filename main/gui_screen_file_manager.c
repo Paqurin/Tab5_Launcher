@@ -127,7 +127,8 @@ void create_file_manager_screen(void) {
     lv_obj_t *file_btn_label = lv_label_create(new_file_btn);
     lv_label_set_text(file_btn_label, LV_SYMBOL_FILE " New");
     lv_obj_center(file_btn_label);
-    
+    lv_obj_add_event_cb(new_file_btn, create_file_event_handler, LV_EVENT_CLICKED, NULL);
+
     // Create folder button
     lv_obj_t *new_folder_btn = lv_button_create(toolbar);
     lv_obj_set_size(new_folder_btn, 80, 35);
@@ -135,6 +136,7 @@ void create_file_manager_screen(void) {
     lv_obj_t *folder_btn_label = lv_label_create(new_folder_btn);
     lv_label_set_text(folder_btn_label, LV_SYMBOL_DIRECTORY " New");
     lv_obj_center(folder_btn_label);
+    lv_obj_add_event_cb(new_folder_btn, create_folder_event_handler, LV_EVENT_CLICKED, NULL);
     
     // Delete button
     delete_btn = lv_button_create(toolbar);
@@ -239,8 +241,14 @@ void update_file_list(void) {
     }
     
     for (int i = 0; i < count; i++) {
-        const char *icon = entries[i].is_directory ? LV_SYMBOL_DIRECTORY : LV_SYMBOL_FILE;
-        
+        const char *icon;
+        if (entries[i].is_directory) {
+            icon = LV_SYMBOL_DIRECTORY;
+        } else {
+            // Use file type detection for appropriate icon
+            icon = file_ops_get_icon_by_filename(entries[i].name);
+        }
+
         // Truncate filename if too long
         char truncated_name[200];
         if (strlen(entries[i].name) > 190) {
@@ -250,7 +258,7 @@ void update_file_list(void) {
         } else {
             strcpy(truncated_name, entries[i].name);
         }
-        
+
         // Create the list item
         lv_obj_t *item = lv_list_add_button(file_list, icon, truncated_name);
         apply_list_item_style(item);
