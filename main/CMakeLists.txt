@@ -10,9 +10,11 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.c" "gui_f
                             "gui_screen_splash.c"
                             "gui_screen_tools.c"
                             "gui_screen_text_editor.c"
+                            "syntax_highlighter.c"
                             "gui_screen_python_launcher.c"
                             "gui_screen_calculator.c"
                             "gui_status_bar.c"
+                            "python_engine.c"
                             "launcher_main.c"
                             "hal.c"
                             "sd_manager.c"
@@ -21,4 +23,6 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.c" "gui_f
                             "firmware_boot.c"
                             "gui_manager.c"
                             "power_monitor.c"
-                    INCLUDE_DIRS ".")
+                    INCLUDE_DIRS "."
+                    REQUIRES micropython_wrapper m5stack-tab5 esp_app_format
+                    PRIV_REQUIRES spiffs json app_update efuse)

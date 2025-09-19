@@ -4,10 +4,13 @@
 #include "gui_styles.h"
 #include "gui_screen_tools.h"
 #include "sd_manager.h"
+#include "python_engine.h"
+#include "file_operations.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 static const char *TAG = "PYTHON_LAUNCHER";
 
@@ -131,11 +134,19 @@ void create_python_launcher_screen(void) {
     output_area = lv_textarea_create(right_panel);
     lv_obj_set_size(output_area, lv_pct(100), lv_pct(85));
     lv_obj_align(output_area, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_textarea_set_text(output_area, "Ready to execute Python scripts...\n\nNote: This is a simplified Python launcher.\nFull Python interpreter integration would\nrequire MicroPython or PyScript integration.");
+    lv_textarea_set_text(output_area, "Python Engine Ready\n\nMicroPython integration in progress...\nSelect a .py script to execute.\n\nFeatures:\n- Script execution with output capture\n- REPL console support\n- Error handling and debugging\n- Memory management for embedded environment");
     lv_obj_set_style_bg_color(output_area, lv_color_hex(0x1e1e1e), 0);
     lv_obj_set_style_text_color(output_area, lv_color_hex(0x00FF00), 0);
     lv_obj_set_style_text_font(output_area, &lv_font_montserrat_12, 0);
     lv_textarea_set_cursor_click_pos(output_area, false);
+
+    // Initialize Python engine
+    esp_err_t ret = python_engine_init();
+    if (ret == ESP_OK) {
+        update_output("Python engine initialized successfully");
+    } else {
+        update_output("Failed to initialize Python engine");
+    }
 
     // Update script list
     update_script_list();
@@ -155,16 +166,48 @@ static void update_script_list(void) {
         return;
     }
 
-    // TODO: Scan for .py files in current directory
-    // For now, add some example entries
-    lv_obj_t *item1 = lv_list_add_button(script_list, LV_SYMBOL_FILE, "example.py");
-    lv_obj_add_event_cb(item1, script_selection_event_handler, LV_EVENT_CLICKED, (void*)"example.py");
+    // Scan for .py files in SD card root directory
+    const char *scan_path = "/sdcard";
+    DIR *dir = opendir(scan_path);
+    if (!dir) {
+        lv_obj_t *item = lv_list_add_text(script_list, "Cannot access SD card");
+        lv_obj_set_style_text_color(item, lv_color_hex(0xFF6B6B), 0);
+        return;
+    }
 
-    lv_obj_t *item2 = lv_list_add_button(script_list, LV_SYMBOL_FILE, "test_script.py");
-    lv_obj_add_event_cb(item2, script_selection_event_handler, LV_EVENT_CLICKED, (void*)"test_script.py");
+    int python_files_found = 0;
+    struct dirent *entry;
 
-    lv_obj_t *info_item = lv_list_add_text(script_list, "Scan SD card for .py files");
-    lv_obj_set_style_text_color(info_item, lv_color_hex(0xFFFFFF), 0);
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) { // Regular file
+            if (python_engine_is_supported_file(entry->d_name)) {
+                // Create file path for user data
+                char *file_path = malloc(strlen(scan_path) + strlen(entry->d_name) + 2);
+                if (file_path) {
+                    sprintf(file_path, "%s/%s", scan_path, entry->d_name);
+
+                    lv_obj_t *item = lv_list_add_button(script_list, LV_SYMBOL_FILE, entry->d_name);
+                    lv_obj_add_event_cb(item, script_selection_event_handler, LV_EVENT_CLICKED, file_path);
+                    lv_obj_set_style_text_color(item, lv_color_hex(0x3498db), 0);
+                    python_files_found++;
+                }
+            }
+        }
+    }
+    closedir(dir);
+
+    if (python_files_found == 0) {
+        lv_obj_t *item = lv_list_add_text(script_list, "No Python files found");
+        lv_obj_set_style_text_color(item, lv_color_hex(0xFFD700), 0);
+
+        lv_obj_t *help_item = lv_list_add_text(script_list, "Place .py files on SD card");
+        lv_obj_set_style_text_color(help_item, lv_color_hex(0xBDBDBD), 0);
+    } else {
+        char count_msg[64];
+        snprintf(count_msg, sizeof(count_msg), "Found %d Python files", python_files_found);
+        lv_obj_t *count_item = lv_list_add_text(script_list, count_msg);
+        lv_obj_set_style_text_color(count_item, lv_color_hex(0x27ae60), 0);
+    }
 }
 
 static void update_output(const char *message) {
@@ -185,16 +228,62 @@ esp_err_t python_launcher_execute_script(const char *script_path) {
     }
 
     ESP_LOGI(TAG, "Executing Python script: %s", script_path);
-    update_output("Starting script execution...");
 
-    // TODO: Implement actual Python script execution
-    // This would require integrating MicroPython or a similar interpreter
+    char exec_msg[128];
+    snprintf(exec_msg, sizeof(exec_msg), "Executing: %s", script_path);
+    update_output(exec_msg);
+    update_output("=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=");
 
-    update_output("ERROR: Python interpreter not available");
-    update_output("This feature requires MicroPython integration");
-    update_output("Script execution completed with error");
+    // Check engine status
+    python_engine_status_t status = python_engine_get_status();
+    if (status == PYTHON_ENGINE_RUNNING) {
+        update_output("ERROR: Python engine is busy");
+        return ESP_ERR_INVALID_STATE;
+    }
 
-    return ESP_ERR_NOT_SUPPORTED;
+    // Execute the script using our Python engine
+    python_execution_result_t result;
+    esp_err_t ret = python_engine_execute_file(script_path, &result);
+
+    if (ret == ESP_OK) {
+        if (result.success) {
+            update_output("SCRIPT OUTPUT:");
+            update_output("---------------");
+            if (result.output && result.output_len > 0) {
+                update_output(result.output);
+            } else {
+                update_output("(no output)");
+            }
+            update_output("---------------");
+            update_output("Script executed successfully");
+        } else {
+            update_output("SCRIPT ERROR:");
+            update_output("-------------");
+            if (result.error_message && result.error_len > 0) {
+                update_output(result.error_message);
+            } else {
+                update_output("Unknown error occurred");
+            }
+            update_output("-------------");
+            update_output("Script execution failed");
+        }
+    } else {
+        update_output("ENGINE ERROR: Failed to execute script");
+        char err_msg[64];
+        snprintf(err_msg, sizeof(err_msg), "Error code: 0x%x", ret);
+        update_output(err_msg);
+    }
+
+    // Show memory usage
+    size_t available_heap = python_engine_get_available_heap();
+    char mem_msg[64];
+    snprintf(mem_msg, sizeof(mem_msg), "Available Python heap: %zu bytes", available_heap);
+    update_output(mem_msg);
+
+    // Clean up result
+    python_engine_free_result(&result);
+
+    return ret;
 }
 
 void show_python_launcher_screen(void) {
@@ -212,6 +301,9 @@ void python_launcher_screen_back(void) {
 
 void destroy_python_launcher_screen(void) {
     if (python_launcher_screen) {
+        // Deinitialize Python engine
+        python_engine_deinit();
+
         lv_obj_del(python_launcher_screen);
         python_launcher_screen = NULL;
         ESP_LOGI(TAG, "Python launcher screen destroyed");
@@ -239,9 +331,9 @@ static void run_button_event_handler(lv_event_t *e) {
 static void script_selection_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
-        const char *script_name = (const char*)lv_event_get_user_data(e);
-        if (script_name) {
-            strncpy(selected_script_path, script_name, sizeof(selected_script_path) - 1);
+        const char *script_path = (const char*)lv_event_get_user_data(e);
+        if (script_path) {
+            strncpy(selected_script_path, script_path, sizeof(selected_script_path) - 1);
             selected_script_path[sizeof(selected_script_path) - 1] = '\0';
 
             ESP_LOGI(TAG, "Selected script: %s", selected_script_path);
@@ -249,10 +341,29 @@ static void script_selection_event_handler(lv_event_t *e) {
             // Enable run button
             lv_obj_clear_state(run_button, LV_STATE_DISABLED);
 
-            // Update output
+            // Update output - extract filename for display
+            const char *filename = strrchr(script_path, '/');
+            if (filename) {
+                filename++; // Skip the '/'
+            } else {
+                filename = script_path;
+            }
+
             char msg[128];
-            snprintf(msg, sizeof(msg), "Selected: %s", script_name);
+            snprintf(msg, sizeof(msg), "Selected: %s", filename);
             update_output(msg);
+
+            // Show file size info
+            FILE *file = fopen(script_path, "r");
+            if (file) {
+                fseek(file, 0, SEEK_END);
+                size_t file_size = ftell(file);
+                fclose(file);
+
+                char size_msg[64];
+                snprintf(size_msg, sizeof(size_msg), "File size: %zu bytes", file_size);
+                update_output(size_msg);
+            }
         }
     }
 }
