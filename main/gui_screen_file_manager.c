@@ -343,11 +343,23 @@ void update_toolbar_button_states(void) {
     
     // Enable/disable paste button based on clipboard content
     if (paste_btn) {
-        if (clipboard_has_content) {
+        if (file_ops_clipboard_has_content()) {
             lv_obj_remove_state(paste_btn, LV_STATE_DISABLED);
         } else {
             lv_obj_add_state(paste_btn, LV_STATE_DISABLED);
             lv_obj_set_style_bg_color(paste_btn, lv_color_hex(0x666666), LV_STATE_DISABLED);
+        }
+    }
+
+    // Update select button text based on file_selection_enabled state
+    if (select_btn) {
+        lv_obj_t *select_btn_label = lv_obj_get_child(select_btn, 0);
+        if (select_btn_label) {
+            if (file_selection_enabled) {
+                lv_label_set_text(select_btn_label, LV_SYMBOL_CLOSE " Cancel");
+            } else {
+                lv_label_set_text(select_btn_label, LV_SYMBOL_OK " Select");
+            }
         }
     }
 }

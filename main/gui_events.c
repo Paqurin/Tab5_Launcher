@@ -44,6 +44,7 @@ static void delete_cancel_handler(lv_event_t *e);
 static void rename_confirm_handler(lv_event_t *e);
 static void rename_cancel_handler(lv_event_t *e);
 static void file_open_choice_handler(lv_event_t *e);
+static void delete_refresh_callback(lv_timer_t *timer);
 
 // Rename context structure
 typedef struct {
@@ -888,15 +889,28 @@ static void delete_confirmation_handler(lv_event_t *e) {
     
     // Close dialog
     lv_obj_del(msgbox);
-    
+
     // Clear selections and exit selection mode
     clear_file_selections();
     file_selection_enabled = false;
-    
-    // Refresh file list
-    update_file_list();
-    
+
+    // CRITICAL FIX: Use delayed update to avoid stack corruption during delete
+    // Schedule file list update for 100ms later to avoid immediate stack issues
+    static lv_timer_t *delete_refresh_timer = NULL;
+    if (delete_refresh_timer) {
+        lv_timer_del(delete_refresh_timer);
+    }
+
+    delete_refresh_timer = lv_timer_create(delete_refresh_callback, 100, NULL);
+    lv_timer_set_repeat_count(delete_refresh_timer, 1);
+
     ESP_LOGI(TAG, "Deletion complete. Deleted: %d, Failed: %d", deleted_count, failed_count);
+}
+
+static void delete_refresh_callback(lv_timer_t *timer) {
+    update_file_list();
+    update_toolbar_button_states(); // Update button states including select button text
+    lv_timer_del(timer);
 }
 
 static void delete_cancel_handler(lv_event_t *e) {
@@ -941,13 +955,18 @@ void copy_files_event_handler(lv_event_t *e) {
             ESP_LOGE(TAG, "Failed to copy to clipboard: %s", full_path);
         }
     }
-    
+
     // Clear selections and exit selection mode
     clear_file_selections();
     file_selection_enabled = false;
-    
-    // Refresh to update button states
-    update_file_list();
+
+    // CRITICAL FIX: Use delayed update to avoid stack corruption during copy
+    static lv_timer_t *copy_refresh_timer = NULL;
+    if (copy_refresh_timer) {
+        lv_timer_del(copy_refresh_timer);
+    }
+    copy_refresh_timer = lv_timer_create(delete_refresh_callback, 100, NULL);
+    lv_timer_set_repeat_count(copy_refresh_timer, 1);
 }
 
 void move_files_event_handler(lv_event_t *e) {
@@ -990,9 +1009,14 @@ void move_files_event_handler(lv_event_t *e) {
     // Clear selections and exit selection mode
     clear_file_selections();
     file_selection_enabled = false;
-    
-    // Refresh to update button states
-    update_file_list();
+
+    // CRITICAL FIX: Use delayed update to avoid stack corruption during move
+    static lv_timer_t *move_refresh_timer = NULL;
+    if (move_refresh_timer) {
+        lv_timer_del(move_refresh_timer);
+    }
+    move_refresh_timer = lv_timer_create(delete_refresh_callback, 100, NULL);
+    lv_timer_set_repeat_count(move_refresh_timer, 1);
 }
 
 void paste_files_event_handler(lv_event_t *e) {
