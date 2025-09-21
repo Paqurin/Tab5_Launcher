@@ -67,6 +67,21 @@ void create_splash_screen(void) {
 
 void destroy_splash_screen(void) {
     if (splash_screen) {
+        ESP_LOGI(TAG, "Destroying splash screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(splash_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(splash_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(splash_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(splash_screen);
         splash_screen = NULL;
         ESP_LOGI(TAG, "Splash screen destroyed");

@@ -13,6 +13,7 @@
 #include "firmware_loader.h"
 #include "gui_screens.h"
 #include "power_monitor.h"
+#include "hardware_control.h"
 
 static const char *TAG = "LAUNCHER";
 static uint32_t boot_timer_start = 0;
@@ -52,6 +53,12 @@ void app_main(void) {
     ESP_LOGI(TAG, "Initializing hardware...");
     hal_init();
     hal_touchpad_init();
+
+    // Initialize hardware control system (switches and power management)
+    ESP_LOGI(TAG, "Initializing hardware control...");
+    if (hardware_control_init() != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to initialize hardware control - switches may not work properly");
+    }
     
     // Initialize configuration manager (SPIFFS)
     ESP_LOGI(TAG, "Initializing configuration manager...");
@@ -144,11 +151,11 @@ void app_main(void) {
             lv_obj_t *active_screen = lv_screen_active();
             if (active_screen == main_screen) {
                 update_status_bar(voltage, current_ma, charging);
-            } else if (active_screen == file_manager_screen) {
+            } else if (active_screen && file_manager_screen && active_screen == file_manager_screen && lv_obj_is_valid(file_manager_screen)) {
                 update_file_manager_status_bar(voltage, current_ma, charging);
-            } else if (active_screen == firmware_loader_screen) {
+            } else if (active_screen && firmware_loader_screen && active_screen == firmware_loader_screen && lv_obj_is_valid(firmware_loader_screen)) {
                 update_firmware_status_bar(voltage, current_ma, charging);
-            } else if (active_screen == settings_screen) {
+            } else if (active_screen && settings_screen && active_screen == settings_screen && lv_obj_is_valid(settings_screen)) {
                 update_settings_status_bar(voltage, current_ma, charging);
             }
         }

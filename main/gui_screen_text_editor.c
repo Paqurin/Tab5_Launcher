@@ -237,7 +237,7 @@ void create_text_editor_screen(void) {
     lv_obj_set_style_border_color(text_area, lv_color_hex(0x44475a), 0);
     lv_obj_set_style_border_width(text_area, 1, 0);
     lv_obj_set_style_pad_all(text_area, 10, 0);
-    lv_obj_set_style_text_font(text_area, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(text_area, &lv_font_montserrat_18, 0);
 
     // Configure text area
     lv_textarea_set_placeholder_text(text_area, "Start typing or open a file...");
@@ -248,7 +248,7 @@ void create_text_editor_screen(void) {
 
     // Create keyboard (initially hidden)
     keyboard = lv_keyboard_create(text_editor_screen);
-    lv_obj_set_size(keyboard, lv_pct(100), 200);
+    lv_obj_set_size(keyboard, lv_pct(100), 280);
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_keyboard_set_textarea(keyboard, text_area);

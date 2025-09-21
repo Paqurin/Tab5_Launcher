@@ -106,10 +106,23 @@ void create_settings_screen(void) {
     
     // Create tabview in the center container
     tabview = lv_tabview_create(center_container);
-    lv_obj_set_size(tabview, lv_pct(95), lv_pct(75));
+    lv_obj_set_size(tabview, lv_pct(98), lv_pct(85));
     lv_obj_align(tabview, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-    lv_tabview_set_tab_bar_size(tabview, 60);
+    lv_tabview_set_tab_bar_size(tabview, 70);
+
+    // Apply consistent styling to match project theme
+    lv_obj_set_style_bg_color(tabview, lv_color_hex(0x2E2E2E), LV_PART_MAIN);
+    lv_obj_set_style_border_color(tabview, lv_color_hex(0x4A90E2), LV_PART_MAIN);
+    lv_obj_set_style_border_width(tabview, 3, LV_PART_MAIN);
+    lv_obj_set_style_radius(tabview, 12, LV_PART_MAIN);
+
+    // Style tab buttons to match project buttons
+    lv_obj_set_style_bg_color(tabview, lv_color_hex(0x2E2E2E), LV_PART_ITEMS);
+    lv_obj_set_style_border_color(tabview, lv_color_hex(0x4A90E2), LV_PART_ITEMS);
+    lv_obj_set_style_border_width(tabview, 2, LV_PART_ITEMS);
+    lv_obj_set_style_text_color(tabview, lv_color_hex(0xFFFFFF), LV_PART_ITEMS);
+    lv_obj_set_style_text_font(tabview, &lv_font_montserrat_24, LV_PART_ITEMS);
     
     // Create tabs
     lv_obj_t *system_tab = lv_tabview_add_tab(tabview, "System");
@@ -581,6 +594,21 @@ lv_obj_t* get_settings_screen(void) {
 
 void destroy_settings_screen(void) {
     if (settings_screen) {
+        ESP_LOGI(TAG, "Destroying settings screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(settings_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(settings_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(settings_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(settings_screen);
         settings_screen = NULL;
         ESP_LOGI(TAG, "Settings screen destroyed");

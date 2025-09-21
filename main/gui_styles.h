@@ -15,10 +15,10 @@
 #define THEME_SUCCESS_COLOR     lv_color_hex(0x00ff00)    // Green for success
 
 // Font sizes
-#define THEME_FONT_LARGE        &lv_font_montserrat_28
-#define THEME_FONT_MEDIUM       &lv_font_montserrat_24
-#define THEME_FONT_NORMAL       &lv_font_montserrat_20
-#define THEME_FONT_SMALL        &lv_font_montserrat_16
+#define THEME_FONT_LARGE        &lv_font_montserrat_32
+#define THEME_FONT_MEDIUM       &lv_font_montserrat_28
+#define THEME_FONT_NORMAL       &lv_font_montserrat_24
+#define THEME_FONT_SMALL        &lv_font_montserrat_20
 
 // Style objects (extern declarations)
 extern lv_style_t style_screen;

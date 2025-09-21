@@ -26,7 +26,7 @@ void gui_styles_init(void) {
     lv_style_set_border_opa(&style_button, LV_OPA_COVER);
     lv_style_set_radius(&style_button, 12);
     lv_style_set_text_color(&style_button, lv_color_hex(0xFFFFFF));
-    lv_style_set_text_font(&style_button, &lv_font_montserrat_20);
+    lv_style_set_text_font(&style_button, &lv_font_montserrat_24);
     lv_style_set_pad_all(&style_button, 16);
     lv_style_set_shadow_width(&style_button, 10);
     lv_style_set_shadow_color(&style_button, lv_color_hex(0x000000));
@@ -63,7 +63,7 @@ void gui_styles_init(void) {
     lv_style_set_border_opa(&style_list_item, LV_OPA_70);
     lv_style_set_radius(&style_list_item, 6);
     lv_style_set_text_color(&style_list_item, lv_color_hex(0xFFFFFF));
-    lv_style_set_text_font(&style_list_item, &lv_font_montserrat_16);
+    lv_style_set_text_font(&style_list_item, &lv_font_montserrat_20);
     lv_style_set_pad_all(&style_list_item, 12);
     lv_style_set_margin_bottom(&style_list_item, 4);
 

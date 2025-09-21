@@ -122,7 +122,20 @@ void create_main_screen(void) {
     lv_label_set_text(final_pipe, "|");
     lv_obj_set_style_text_color(final_pipe, lv_color_hex(0x000000), 0);
     lv_obj_set_style_text_font(final_pipe, &lv_font_montserrat_20, 0);
-    
+
+    // Switches button in top right corner
+    lv_obj_t *switches_btn = lv_button_create(main_screen);
+    lv_obj_set_size(switches_btn, 80, 40);  // 80px x 40px rectangular
+    lv_obj_align(switches_btn, LV_ALIGN_TOP_RIGHT, -5, 45);  // Top right, below status bar
+    apply_button_style(switches_btn);
+    lv_obj_set_style_bg_color(switches_btn, lv_color_hex(0x8e44ad), 0);  // Purple color
+    lv_obj_add_event_cb(switches_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)9);
+
+    lv_obj_t *switches_label = lv_label_create(switches_btn);
+    lv_label_set_text(switches_label, "Switches");
+    lv_obj_set_style_text_font(switches_label, &lv_font_montserrat_12, 0);  // Smaller font to fit
+    lv_obj_center(switches_label);
+
     // Create centered container for main controls
     lv_obj_t *center_container = lv_obj_create(main_screen);
     lv_obj_set_size(center_container, lv_pct(80), lv_pct(85));
@@ -368,6 +381,21 @@ void update_main_screen(void) {
 
 void destroy_main_screen(void) {
     if (main_screen) {
+        ESP_LOGI(TAG, "Destroying main screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(main_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(main_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(main_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(main_screen);
         main_screen = NULL;
         ESP_LOGI(TAG, "Main screen destroyed");

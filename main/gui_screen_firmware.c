@@ -134,6 +134,21 @@ void update_firmware_list(void) {
 
 void destroy_firmware_loader_screen(void) {
     if (firmware_loader_screen) {
+        ESP_LOGI(TAG, "Destroying firmware loader screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(firmware_loader_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(firmware_loader_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(firmware_loader_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(firmware_loader_screen);
         firmware_loader_screen = NULL;
         ESP_LOGI(TAG, "Firmware loader screen destroyed");

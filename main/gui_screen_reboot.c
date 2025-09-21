@@ -59,6 +59,21 @@ void create_reboot_dialog_screen(void) {
 
 void destroy_reboot_dialog_screen(void) {
     if (reboot_dialog_screen) {
+        ESP_LOGI(TAG, "Destroying reboot dialog screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(reboot_dialog_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(reboot_dialog_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(reboot_dialog_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(reboot_dialog_screen);
         reboot_dialog_screen = NULL;
         ESP_LOGI(TAG, "Reboot dialog screen destroyed");

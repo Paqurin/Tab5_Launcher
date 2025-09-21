@@ -7,6 +7,7 @@
 #include "gui_screen_tools.h"
 #include "gui_screen_text_editor.h"
 #include "gui_screen_python_launcher.h"
+#include "gui_screen_switches.h"
 #include "gui_styles.h"
 #include "firmware_loader.h"
 #include "sd_manager.h"
@@ -200,6 +201,10 @@ void main_menu_event_handler(lv_event_t *e) {
                 lv_obj_t *clean_label = lv_label_create(clean_btn);
                 lv_label_set_text(clean_label, "Clean");
                 lv_obj_center(clean_label);
+                break;
+            case 9: // Switches
+                ESP_LOGI(TAG, "Switches selected");
+                show_switches_screen();
                 break;
         }
     }
@@ -1053,7 +1058,7 @@ void rename_file_event_handler(lv_event_t *e) {
     // Create keyboard for text input
     lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
     lv_keyboard_set_textarea(keyboard, ta);
-    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(60));
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
 
@@ -1295,7 +1300,7 @@ void create_file_event_handler(lv_event_t *e) {
     // Create keyboard for text input
     lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
     lv_keyboard_set_textarea(keyboard, ta);
-    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(60));
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
 
@@ -1392,7 +1397,7 @@ void create_folder_event_handler(lv_event_t *e) {
     // Create keyboard for text input
     lv_obj_t *keyboard = lv_keyboard_create(lv_screen_active());
     lv_keyboard_set_textarea(keyboard, ta);
-    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(50));
+    lv_obj_set_size(keyboard, lv_pct(100), lv_pct(60));
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); // Initially hidden
 

@@ -118,7 +118,7 @@ void create_tools_screen(void) {
     // Create tool buttons in 2x2 grid
     for (int i = 0; i < 4; i++) {
         lv_obj_t *tool_btn = lv_button_create(tools_container);
-        lv_obj_set_size(tool_btn, 140, 100);
+        lv_obj_set_size(tool_btn, 160, 110);
         apply_button_style(tool_btn);
         lv_obj_set_style_bg_color(tool_btn, tools[i].color, 0);
         lv_obj_add_event_cb(tool_btn, tools_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)tools[i].tool_id);
@@ -140,13 +140,13 @@ void create_tools_screen(void) {
         lv_obj_t *symbol_label = lv_label_create(btn_content);
         lv_label_set_text(symbol_label, tools[i].symbol);
         lv_obj_set_style_text_color(symbol_label, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_set_style_text_font(symbol_label, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_font(symbol_label, &lv_font_montserrat_28, 0);
 
         // Text
         lv_obj_t *text_label = lv_label_create(btn_content);
         lv_label_set_text(text_label, tools[i].text);
         lv_obj_set_style_text_color(text_label, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_set_style_text_font(text_label, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(text_label, &lv_font_montserrat_18, 0);
         lv_obj_set_style_text_align(text_label, LV_TEXT_ALIGN_CENTER, 0);
     }
 }
@@ -160,11 +160,41 @@ void show_tools_screen(void) {
 
 void tools_screen_back(void) {
     ESP_LOGI(TAG, "Returning to main screen");
+    // CRITICAL FIX: Switch to main screen BEFORE destroying to prevent active screen deletion
     lv_screen_load(main_screen);
+    // Now safe to clean up tools screen after switching away
+    destroy_tools_screen();
 }
 
 void destroy_tools_screen(void) {
     if (tools_screen) {
+        ESP_LOGI(TAG, "Destroying tools screen...");
+
+        // DEFENSIVE: Check screen validity before destruction
+        if (!lv_obj_is_valid(tools_screen)) {
+            ESP_LOGW(TAG, "Tools screen is invalid, setting to NULL");
+            tools_screen = NULL;
+            return;
+        }
+
+        // DEFENSIVE: Check if screen is currently active
+        if (lv_screen_active() == tools_screen) {
+            ESP_LOGW(TAG, "Warning: Destroying active screen - this should not happen");
+        }
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(tools_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(tools_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(tools_screen, i);
+            if (child && lv_obj_is_valid(child)) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(tools_screen);
         tools_screen = NULL;
         ESP_LOGI(TAG, "Tools screen destroyed");

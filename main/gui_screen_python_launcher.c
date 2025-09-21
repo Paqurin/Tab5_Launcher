@@ -6,6 +6,7 @@
 #include "sd_manager.h"
 #include "python_engine.h"
 #include "file_operations.h"
+#include "screenshot_util.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -22,6 +23,7 @@ static char selected_script_path[256] = {0};
 
 // Forward declarations
 static void py_back_button_event_handler(lv_event_t *e);
+static void screenshot_button_event_handler(lv_event_t *e);
 static void run_button_event_handler(lv_event_t *e);
 static void script_selection_event_handler(lv_event_t *e);
 static void update_script_list(void);
@@ -63,6 +65,18 @@ void create_python_launcher_screen(void) {
     lv_label_set_text(back_label, LV_SYMBOL_LEFT);
     lv_obj_center(back_label);
 
+    // Screenshot button (next to back button)
+    lv_obj_t *screenshot_btn = lv_button_create(title_bar);
+    lv_obj_set_size(screenshot_btn, 60, 40);
+    lv_obj_align(screenshot_btn, LV_ALIGN_LEFT_MID, 70, 0);  // 70px from left (after back button + gap)
+    apply_button_style(screenshot_btn);
+    lv_obj_set_style_bg_color(screenshot_btn, lv_color_hex(0xe74c3c), 0);  // Red color
+    lv_obj_add_event_cb(screenshot_btn, screenshot_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *screenshot_label = lv_label_create(screenshot_btn);
+    lv_label_set_text(screenshot_label, LV_SYMBOL_IMAGE);
+    lv_obj_center(screenshot_label);
+
     // Title
     lv_obj_t *title_label = lv_label_create(title_bar);
     lv_label_set_text(title_label, "Python Launcher");
@@ -83,61 +97,25 @@ void create_python_launcher_screen(void) {
     lv_label_set_text(run_label, LV_SYMBOL_PLAY);
     lv_obj_center(run_label);
 
-    // Create main container
-    lv_obj_t *main_container = lv_obj_create(python_launcher_screen);
-    lv_obj_set_size(main_container, lv_pct(100), lv_pct(100) - 60);
-    lv_obj_align(main_container, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_opa(main_container, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_opa(main_container, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_all(main_container, 10, 0);
-
-    // Create left panel for script list
-    lv_obj_t *left_panel = lv_obj_create(main_container);
-    lv_obj_set_size(left_panel, lv_pct(45), lv_pct(100));
-    lv_obj_align(left_panel, LV_ALIGN_LEFT_MID, 0, 0);
-    lv_obj_set_style_bg_color(left_panel, lv_color_hex(0x2c3e50), 0);
-    lv_obj_set_style_border_color(left_panel, lv_color_hex(0x34495e), 0);
-    lv_obj_set_style_border_width(left_panel, 1, 0);
-    lv_obj_set_style_pad_all(left_panel, 10, 0);
-
-    // Script list label
-    lv_obj_t *list_label = lv_label_create(left_panel);
-    lv_label_set_text(list_label, "Python Scripts:");
-    lv_obj_set_style_text_color(list_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(list_label, &lv_font_montserrat_14, 0);
-    lv_obj_align(list_label, LV_ALIGN_TOP_LEFT, 0, 0);
-
-    // Create script list
-    script_list = lv_list_create(left_panel);
-    lv_obj_set_size(script_list, lv_pct(100), lv_pct(85));
-    lv_obj_align(script_list, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(script_list, lv_color_hex(0x1e1e1e), 0);
+    // Create script list - left side (Tab5 screen is 800x480, title bar is 60px)
+    script_list = lv_list_create(python_launcher_screen);
+    lv_obj_set_size(script_list, 390, 410);  // Half screen width (390px), full remaining height (410px)
+    lv_obj_set_pos(script_list, 5, 65);  // Start just below title bar
+    lv_obj_set_style_bg_color(script_list, lv_color_hex(0x000000), 0);
     lv_obj_set_style_text_color(script_list, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_border_color(script_list, lv_color_hex(0x34495e), 0);
+    lv_obj_set_style_border_width(script_list, 1, 0);
 
-    // Create right panel for output
-    lv_obj_t *right_panel = lv_obj_create(main_container);
-    lv_obj_set_size(right_panel, lv_pct(50), lv_pct(100));
-    lv_obj_align(right_panel, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_obj_set_style_bg_color(right_panel, lv_color_hex(0x2c3e50), 0);
-    lv_obj_set_style_border_color(right_panel, lv_color_hex(0x34495e), 0);
-    lv_obj_set_style_border_width(right_panel, 1, 0);
-    lv_obj_set_style_pad_all(right_panel, 10, 0);
-
-    // Output label
-    lv_obj_t *output_label = lv_label_create(right_panel);
-    lv_label_set_text(output_label, "Output:");
-    lv_obj_set_style_text_color(output_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(output_label, &lv_font_montserrat_14, 0);
-    lv_obj_align(output_label, LV_ALIGN_TOP_LEFT, 0, 0);
-
-    // Create output area
-    output_area = lv_textarea_create(right_panel);
-    lv_obj_set_size(output_area, lv_pct(100), lv_pct(85));
-    lv_obj_align(output_area, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // Create output area - right side
+    output_area = lv_textarea_create(python_launcher_screen);
+    lv_obj_set_size(output_area, 390, 410);  // Half screen width (390px), full remaining height (410px)
+    lv_obj_set_pos(output_area, 405, 65);  // Position to right of script list with small gap
     lv_textarea_set_text(output_area, "Python Engine Ready\n\nMicroPython integration in progress...\nSelect a .py script to execute.\n\nFeatures:\n- Script execution with output capture\n- REPL console support\n- Error handling and debugging\n- Memory management for embedded environment");
     lv_obj_set_style_bg_color(output_area, lv_color_hex(0x1e1e1e), 0);
     lv_obj_set_style_text_color(output_area, lv_color_hex(0x00FF00), 0);
-    lv_obj_set_style_text_font(output_area, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(output_area, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_border_color(output_area, lv_color_hex(0x34495e), 0);
+    lv_obj_set_style_border_width(output_area, 1, 0);
     lv_textarea_set_cursor_click_pos(output_area, false);
 
     // Initialize Python engine
@@ -163,6 +141,7 @@ static void update_script_list(void) {
     if (!sd_manager_is_mounted()) {
         lv_obj_t *item = lv_list_add_text(script_list, "SD card not mounted");
         lv_obj_set_style_text_color(item, lv_color_hex(0xFF6B6B), 0);
+        lv_obj_set_style_bg_color(item, lv_color_hex(0x000000), 0);
         return;
     }
 
@@ -172,6 +151,7 @@ static void update_script_list(void) {
     if (!dir) {
         lv_obj_t *item = lv_list_add_text(script_list, "Cannot access SD card");
         lv_obj_set_style_text_color(item, lv_color_hex(0xFF6B6B), 0);
+        lv_obj_set_style_bg_color(item, lv_color_hex(0x000000), 0);
         return;
     }
 
@@ -189,6 +169,7 @@ static void update_script_list(void) {
                     lv_obj_t *item = lv_list_add_button(script_list, LV_SYMBOL_FILE, entry->d_name);
                     lv_obj_add_event_cb(item, script_selection_event_handler, LV_EVENT_CLICKED, file_path);
                     lv_obj_set_style_text_color(item, lv_color_hex(0x3498db), 0);
+                    lv_obj_set_style_bg_color(item, lv_color_hex(0x000000), 0);  // Black background for file items
                     python_files_found++;
                 }
             }
@@ -199,14 +180,17 @@ static void update_script_list(void) {
     if (python_files_found == 0) {
         lv_obj_t *item = lv_list_add_text(script_list, "No Python files found");
         lv_obj_set_style_text_color(item, lv_color_hex(0xFFD700), 0);
+        lv_obj_set_style_bg_color(item, lv_color_hex(0x000000), 0);
 
         lv_obj_t *help_item = lv_list_add_text(script_list, "Place .py files on SD card");
         lv_obj_set_style_text_color(help_item, lv_color_hex(0xBDBDBD), 0);
+        lv_obj_set_style_bg_color(help_item, lv_color_hex(0x000000), 0);
     } else {
         char count_msg[64];
         snprintf(count_msg, sizeof(count_msg), "Found %d Python files", python_files_found);
         lv_obj_t *count_item = lv_list_add_text(script_list, count_msg);
         lv_obj_set_style_text_color(count_item, lv_color_hex(0x27ae60), 0);
+        lv_obj_set_style_bg_color(count_item, lv_color_hex(0x000000), 0);
     }
 }
 
@@ -293,24 +277,8 @@ void show_python_launcher_screen(void) {
 
     if (file_manager_screen) {
         ESP_LOGI(TAG, "Cleaning up file manager screen before Python launcher");
-
-        // DEFENSIVE: Check validity before cleanup
-        if (lv_obj_is_valid(file_manager_screen)) {
-            // Disable events before destroying to prevent corruption
-            lv_obj_remove_event_cb(file_manager_screen, NULL);
-            uint32_t child_cnt = lv_obj_get_child_count(file_manager_screen);
-            for (uint32_t i = 0; i < child_cnt; i++) {
-                lv_obj_t *child = lv_obj_get_child(file_manager_screen, i);
-                if (child && lv_obj_is_valid(child)) {
-                    lv_obj_remove_event_cb(child, NULL);
-                }
-            }
-            // Safely destroy the file manager screen
-            destroy_file_manager_screen();
-        } else {
-            ESP_LOGW(TAG, "File manager screen is invalid, setting to NULL");
-            file_manager_screen = NULL;
-        }
+        // Simply call the destruction function - it already has all the defensive checks
+        destroy_file_manager_screen();
     }
 
     if (!python_launcher_screen) {
@@ -384,6 +352,19 @@ static void py_back_button_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
         python_launcher_screen_back();
+    }
+}
+
+static void screenshot_button_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        ESP_LOGI(TAG, "Taking screenshot...");
+        esp_err_t ret = screenshot_take_and_save();
+        if (ret == ESP_OK) {
+            update_output("Screenshot saved to SD card");
+        } else {
+            update_output("Failed to save screenshot");
+        }
     }
 }
 

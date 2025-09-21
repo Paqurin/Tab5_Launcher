@@ -348,6 +348,21 @@ void wifi_setup_clear_password(void) {
 
 void destroy_wifi_setup_screen(void) {
     if (wifi_setup_screen) {
+        ESP_LOGI(TAG, "Destroying wifi setup screen...");
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(wifi_setup_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(wifi_setup_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(wifi_setup_screen, i);
+            if (child) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(wifi_setup_screen);
         wifi_setup_screen = NULL;
         ESP_LOGI(TAG, "WiFi setup screen destroyed");
