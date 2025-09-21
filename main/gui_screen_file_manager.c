@@ -25,6 +25,11 @@ static lv_obj_t *rename_btn = NULL;
 static lv_obj_t *paste_btn = NULL;
 
 void create_file_manager_screen(void) {
+    if (file_manager_screen) {
+        ESP_LOGW(TAG, "File manager screen already exists, skipping creation");
+        return;
+    }
+
     file_manager_screen = lv_obj_create(NULL);
     lv_obj_add_style(file_manager_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
@@ -366,9 +371,12 @@ void update_toolbar_button_states(void) {
 
 void update_file_manager_screen(void) {
     if (file_manager_screen) {
-        lv_obj_clean(file_manager_screen);
-        create_file_manager_screen();
+        // CRITICAL FIX: Properly destroy and recreate to prevent corruption
+        ESP_LOGI(TAG, "Updating file manager screen - full recreation");
+        destroy_file_manager_screen();
     }
+    // Always recreate to ensure clean state
+    create_file_manager_screen();
 }
 
 void destroy_file_manager_screen(void) {
