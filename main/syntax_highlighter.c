@@ -229,10 +229,24 @@ static bool is_keyword(const char* word, const char** keyword_list) {
 }
 
 static bool parse_tokens(const char* text, text_file_type_t file_type) {
-    if (!text) return false;
+    if (!text) {
+        ESP_LOGW(TAG, "Attempted to parse NULL text");
+        return false;
+    }
 
-    // Reset token count
+    size_t text_len = strlen(text);
+    // Prevent parsing extremely large files that could cause memory issues
+    const size_t MAX_TEXT_SIZE = 64 * 1024; // 64KB limit
+    if (text_len > MAX_TEXT_SIZE) {
+        ESP_LOGW(TAG, "Text too large for syntax highlighting: %zu bytes (max: %zu)",
+                 text_len, MAX_TEXT_SIZE);
+        return false;
+    }
+
+    // Reset token count for new parsing
     g_highlighter.token_count = 0;
+
+    ESP_LOGD(TAG, "Parsing %zu bytes of text for file type %d", text_len, file_type);
 
     switch (file_type) {
         case TEXT_FILE_JSON:
@@ -251,30 +265,70 @@ static bool parse_tokens(const char* text, text_file_type_t file_type) {
             parse_javascript(text);
             break;
         default:
+            ESP_LOGW(TAG, "Unsupported file type for parsing: %d", file_type);
             return false;
     }
 
+    ESP_LOGD(TAG, "Parsing completed, generated %d tokens", g_highlighter.token_count);
     return true;
 }
 
 static void add_token(uint16_t start, uint16_t length, syntax_token_type_t type) {
-    if (g_highlighter.token_count >= g_highlighter.token_capacity) {
-        // Expand token array if needed
-        g_highlighter.token_capacity *= 2;
-        syntax_token_t *new_tokens = realloc(g_highlighter.tokens,
-                                            g_highlighter.token_capacity * sizeof(syntax_token_t));
-        if (!new_tokens) {
-            ESP_LOGE(TAG, "Failed to expand token array");
-            return;
-        }
-        g_highlighter.tokens = new_tokens;
+    // Safety checks to prevent memory corruption
+    if (length == 0) {
+        ESP_LOGW(TAG, "Attempted to add token with zero length");
+        return;
     }
 
-    syntax_token_t *token = &g_highlighter.tokens[g_highlighter.token_count++];
+    // Prevent excessive token counts that could cause memory issues
+    const uint16_t MAX_TOKENS = 2048;
+    if (g_highlighter.token_count >= MAX_TOKENS) {
+        ESP_LOGW(TAG, "Maximum token count reached, skipping token");
+        return;
+    }
+
+    // Check if we need to expand the token array
+    if (g_highlighter.token_count >= g_highlighter.token_capacity) {
+        // Limit the maximum capacity to prevent runaway memory allocation
+        const uint16_t MAX_CAPACITY = MAX_TOKENS;
+        uint16_t new_capacity = g_highlighter.token_capacity * 2;
+
+        if (new_capacity > MAX_CAPACITY) {
+            new_capacity = MAX_CAPACITY;
+        }
+
+        if (g_highlighter.token_capacity >= MAX_CAPACITY) {
+            ESP_LOGW(TAG, "Token capacity limit reached");
+            return;
+        }
+
+        syntax_token_t *new_tokens = realloc(g_highlighter.tokens,
+                                            new_capacity * sizeof(syntax_token_t));
+        if (!new_tokens) {
+            ESP_LOGE(TAG, "Failed to expand token array to capacity %d", new_capacity);
+            return;
+        }
+
+        g_highlighter.tokens = new_tokens;
+        g_highlighter.token_capacity = new_capacity;
+        ESP_LOGD(TAG, "Expanded token array to capacity %d", new_capacity);
+    }
+
+    // Bounds checking for token array access
+    if (g_highlighter.token_count >= g_highlighter.token_capacity) {
+        ESP_LOGE(TAG, "Token count exceeds capacity, corrupted state");
+        return;
+    }
+
+    syntax_token_t *token = &g_highlighter.tokens[g_highlighter.token_count];
     token->start_pos = start;
     token->length = length;
     token->type = type;
-    token->color = syntax_highlighter_get_token_color(type);
+
+    g_highlighter.token_count++;
+
+    ESP_LOGV(TAG, "Added token: start=%d, length=%d, type=%d, total_tokens=%d",
+             start, length, type, g_highlighter.token_count);
 }
 
 static void parse_json(const char* text) {

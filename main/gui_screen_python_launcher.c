@@ -287,6 +287,32 @@ esp_err_t python_launcher_execute_script(const char *script_path) {
 }
 
 void show_python_launcher_screen(void) {
+    // CRITICAL FIX: Clean up file manager screen before switching to prevent LVGL corruption
+    extern lv_obj_t *file_manager_screen;
+    extern void destroy_file_manager_screen(void);
+
+    if (file_manager_screen) {
+        ESP_LOGI(TAG, "Cleaning up file manager screen before Python launcher");
+
+        // DEFENSIVE: Check validity before cleanup
+        if (lv_obj_is_valid(file_manager_screen)) {
+            // Disable events before destroying to prevent corruption
+            lv_obj_remove_event_cb(file_manager_screen, NULL);
+            uint32_t child_cnt = lv_obj_get_child_count(file_manager_screen);
+            for (uint32_t i = 0; i < child_cnt; i++) {
+                lv_obj_t *child = lv_obj_get_child(file_manager_screen, i);
+                if (child && lv_obj_is_valid(child)) {
+                    lv_obj_remove_event_cb(child, NULL);
+                }
+            }
+            // Safely destroy the file manager screen
+            destroy_file_manager_screen();
+        } else {
+            ESP_LOGW(TAG, "File manager screen is invalid, setting to NULL");
+            file_manager_screen = NULL;
+        }
+    }
+
     if (!python_launcher_screen) {
         create_python_launcher_screen();
     }
@@ -296,17 +322,60 @@ void show_python_launcher_screen(void) {
 
 void python_launcher_screen_back(void) {
     ESP_LOGI(TAG, "Returning to tools screen");
+
+    // CRITICAL FIX: Load new screen BEFORE destroying current screen to prevent NULL active screen
     lv_screen_load(tools_screen);
+
+    // Now safely destroy Python launcher screen AFTER new screen is active
+    destroy_python_launcher_screen();
 }
 
 void destroy_python_launcher_screen(void) {
     if (python_launcher_screen) {
-        // Deinitialize Python engine
+        ESP_LOGI(TAG, "Destroying Python launcher screen...");
+
+        // DEFENSIVE: Check screen validity before destruction
+        if (!lv_obj_is_valid(python_launcher_screen)) {
+            ESP_LOGW(TAG, "Python launcher screen is invalid, setting to NULL");
+            python_launcher_screen = NULL;
+            script_list = NULL;
+            output_area = NULL;
+            run_button = NULL;
+            return;
+        }
+
+        // DEFENSIVE: Check if screen is currently active
+        if (lv_screen_active() == python_launcher_screen) {
+            ESP_LOGW(TAG, "Destroying active screen - ensuring safe deletion");
+        }
+
+        // Deinitialize Python engine first
         python_engine_deinit();
 
-        lv_obj_del(python_launcher_screen);
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(python_launcher_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(python_launcher_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(python_launcher_screen, i);
+            if (child && lv_obj_is_valid(child)) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // DEFENSIVE: Final validation before deletion
+        if (lv_obj_is_valid(python_launcher_screen)) {
+            lv_obj_del(python_launcher_screen);
+            ESP_LOGI(TAG, "Python launcher screen destroyed");
+        } else {
+            ESP_LOGW(TAG, "Python launcher screen became invalid during cleanup");
+        }
+
         python_launcher_screen = NULL;
-        ESP_LOGI(TAG, "Python launcher screen destroyed");
+        script_list = NULL;
+        output_area = NULL;
+        run_button = NULL;
     }
 }
 

@@ -47,7 +47,7 @@ void create_file_manager_screen(void) {
     
     // Current path
     current_path_label = lv_label_create(center_container);
-    lv_label_set_text(current_path_label, "/sdcard");
+    lv_label_set_text(current_path_label, current_directory);
     lv_obj_set_style_text_color(current_path_label, THEME_SUCCESS_COLOR, 0);
     lv_obj_set_style_text_font(current_path_label, THEME_FONT_NORMAL, 0);
     lv_obj_align(current_path_label, LV_ALIGN_TOP_LEFT, 10, 60);
@@ -373,6 +373,33 @@ void update_file_manager_screen(void) {
 
 void destroy_file_manager_screen(void) {
     if (file_manager_screen) {
+        ESP_LOGI(TAG, "Destroying file manager screen...");
+
+        // DEFENSIVE: Check screen validity before destruction
+        if (!lv_obj_is_valid(file_manager_screen)) {
+            ESP_LOGW(TAG, "File manager screen is invalid, setting to NULL");
+            file_manager_screen = NULL;
+            return;
+        }
+
+        // DEFENSIVE: Check if screen is currently active
+        if (lv_screen_active() == file_manager_screen) {
+            ESP_LOGW(TAG, "Destroying active screen - ensuring safe deletion");
+        }
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(file_manager_screen, NULL);
+
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(file_manager_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(file_manager_screen, i);
+            if (child && lv_obj_is_valid(child)) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // Now safely delete the screen
         lv_obj_del(file_manager_screen);
         file_manager_screen = NULL;
         ESP_LOGI(TAG, "File manager screen destroyed");

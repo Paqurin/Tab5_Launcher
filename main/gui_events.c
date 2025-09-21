@@ -43,7 +43,6 @@ static void delete_confirmation_handler(lv_event_t *e);
 static void delete_cancel_handler(lv_event_t *e);
 static void rename_confirm_handler(lv_event_t *e);
 static void rename_cancel_handler(lv_event_t *e);
-static void file_open_choice_handler(lv_event_t *e);
 static void delete_refresh_callback(lv_timer_t *timer);
 
 // Rename context structure
@@ -244,13 +243,12 @@ void file_list_event_handler(lv_event_t *e) {
                     ESP_LOGW(TAG, "Directory path would be too long");
                 }
             } else {
-                // Check if it's a supported file and determine available options using file type detection
+                // Check if it's a supported file and treat all editable files the same way
                 file_type_t file_type = file_ops_detect_type(current_entries[index].name);
                 bool can_edit = file_ops_is_editable(file_type);
-                bool can_run_python = (file_type == FILE_TYPE_PYTHON);
 
-                if (can_edit && can_run_python) {
-                    // File can be opened in both text editor and Python launcher - show choice dialog
+                if (can_edit) {
+                    // All editable files (including .py) open directly in text editor
                     char full_path[1024];
                     if (strcmp(current_directory, "/") == 0) {
                         snprintf(full_path, sizeof(full_path), "/%s", current_entries[index].name);
@@ -259,82 +257,34 @@ void file_list_event_handler(lv_event_t *e) {
                                 current_directory, current_entries[index].name);
                     }
 
-                    // Create choice dialog
-                    lv_obj_t *msgbox = lv_msgbox_create(lv_screen_active());
+                    ESP_LOGI(TAG, "Opening file in text editor: %s", full_path);
+                    // CRITICAL FIX: Disable ALL events FIRST to prevent corruption during destruction
+                    if (file_manager_screen) {
+                        lv_obj_remove_event_cb(file_manager_screen, NULL);
+                        uint32_t child_cnt = lv_obj_get_child_count(file_manager_screen);
+                        for (uint32_t i = 0; i < child_cnt; i++) {
+                            lv_obj_t *child = lv_obj_get_child(file_manager_screen, i);
+                            if (child) {
+                                lv_obj_remove_event_cb(child, NULL);
+                            }
+                        }
+                        // CRITICAL FIX: Create text editor screen FIRST, load it, then destroy file manager
+                        create_text_editor_screen();
+                        esp_err_t ret = text_editor_open_file(full_path);
+                        if (ret == ESP_OK) {
+                            // CRITICAL: Load new screen BEFORE destroying old screen
+                            lv_screen_load(text_editor_screen);
 
-                    // Title
-                    lv_obj_t *title_text = lv_label_create(msgbox);
-                    lv_label_set_text(title_text, "Open File");
-                    lv_obj_set_style_text_font(title_text, &lv_font_montserrat_16, 0);
-                    lv_obj_align(title_text, LV_ALIGN_TOP_MID, 0, 10);
-
-                    // Message
-                    lv_obj_t *msg_text = lv_label_create(msgbox);
-                    char msg[128];
-                    snprintf(msg, sizeof(msg), "How would you like to open\n%s?", current_entries[index].name);
-                    lv_label_set_text(msg_text, msg);
-                    lv_obj_set_style_text_align(msg_text, LV_TEXT_ALIGN_CENTER, 0);
-                    lv_obj_align(msg_text, LV_ALIGN_CENTER, 0, -10);
-
-                    // Text Editor button
-                    lv_obj_t *edit_btn = lv_button_create(msgbox);
-                    lv_obj_set_size(edit_btn, 100, 40);
-                    lv_obj_align(edit_btn, LV_ALIGN_BOTTOM_LEFT, 20, -20);
-                    apply_button_style(edit_btn);
-                    lv_obj_set_style_bg_color(edit_btn, lv_color_hex(0x4ecdc4), 0);
-
-                    lv_obj_t *edit_label = lv_label_create(edit_btn);
-                    lv_label_set_text(edit_label, LV_SYMBOL_EDIT " Edit");
-                    lv_obj_center(edit_label);
-
-                    // Python Launcher button
-                    lv_obj_t *run_btn = lv_button_create(msgbox);
-                    lv_obj_set_size(run_btn, 100, 40);
-                    lv_obj_align(run_btn, LV_ALIGN_BOTTOM_RIGHT, -20, -20);
-                    apply_button_style(run_btn);
-                    lv_obj_set_style_bg_color(run_btn, lv_color_hex(0x3d5a80), 0);
-
-                    lv_obj_t *run_label = lv_label_create(run_btn);
-                    lv_label_set_text(run_label, LV_SYMBOL_PLAY " Run");
-                    lv_obj_center(run_label);
-
-                    // Store file path for button handlers - use separate copies to avoid data corruption
-                    char *edit_path_copy = malloc(strlen(full_path) + 1);
-                    char *run_path_copy = malloc(strlen(full_path) + 1);
-                    strcpy(edit_path_copy, full_path);
-                    strcpy(run_path_copy, full_path);
-
-                    // Store choice in user data using different pointers
-                    lv_obj_add_event_cb(edit_btn, file_open_choice_handler, LV_EVENT_CLICKED,
-                                       (void*)(uintptr_t)(((uintptr_t)edit_path_copy & ~0x3UL) | 0x1)); // Edit choice
-                    lv_obj_add_event_cb(run_btn, file_open_choice_handler, LV_EVENT_CLICKED,
-                                       (void*)(uintptr_t)(((uintptr_t)run_path_copy & ~0x3UL) | 0x2)); // Run choice
-
-                    lv_obj_set_size(msgbox, 300, 200);
-                    lv_obj_center(msgbox);
-
-                } else if (can_edit) {
-                    // Only text editor available
-                    char full_path[1024];
-                    if (strcmp(current_directory, "/") == 0) {
-                        snprintf(full_path, sizeof(full_path), "/%s", current_entries[index].name);
-                    } else {
-                        snprintf(full_path, sizeof(full_path), "%s/%s",
-                                current_directory, current_entries[index].name);
+                            // CRITICAL FIX: DO NOT destroy the old screen immediately
+                            // Let LVGL fully process the screen switch first
+                            ESP_LOGI(TAG, "Text editor loaded, file manager screen will be cleaned up later");
+                        } else {
+                            ESP_LOGE(TAG, "Failed to open file in text editor: %s", esp_err_to_name(ret));
+                            // Cleanup text editor since we failed
+                            destroy_text_editor_screen();
+                        }
+                        return; // CRITICAL: Exit immediately
                     }
-
-                    ESP_LOGI(TAG, "Opening text file in editor: %s", full_path);
-                    create_text_editor_screen();
-                    esp_err_t ret = text_editor_open_file(full_path);
-                    if (ret == ESP_OK) {
-                        lv_screen_load(text_editor_screen);
-                    } else {
-                        ESP_LOGE(TAG, "Failed to open file in text editor: %s", esp_err_to_name(ret));
-                    }
-                } else if (can_run_python) {
-                    // Only Python launcher available
-                    ESP_LOGI(TAG, "Opening Python file in launcher: %s", current_entries[index].name);
-                    show_python_launcher_screen();
                 } else {
                     ESP_LOGI(TAG, "File type not supported: %s", current_entries[index].name);
                 }
@@ -1183,37 +1133,6 @@ static void rename_cancel_handler(lv_event_t *e) {
     ESP_LOGI(TAG, "Rename cancelled");
 }
 
-static void file_open_choice_handler(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code != LV_EVENT_CLICKED) return;
-
-    // Extract choice and file path from user data
-    uintptr_t data = (uintptr_t)lv_event_get_user_data(e);
-    int choice = data & 0x3; // Last 2 bits contain choice
-    char *file_path = (char*)(data & ~0x3UL); // Remove choice bits to get pointer
-
-    lv_obj_t *msgbox = lv_obj_get_parent(lv_obj_get_parent(lv_event_get_target(e)));
-    lv_obj_del(msgbox);
-
-    if (choice == 1) {
-        // Open in text editor
-        ESP_LOGI(TAG, "Opening file in text editor: %s", file_path);
-        create_text_editor_screen();
-        esp_err_t ret = text_editor_open_file(file_path);
-        if (ret == ESP_OK) {
-            lv_screen_load(text_editor_screen);
-        } else {
-            ESP_LOGE(TAG, "Failed to open file in text editor: %s", esp_err_to_name(ret));
-        }
-    } else if (choice == 2) {
-        // Open in Python launcher
-        ESP_LOGI(TAG, "Opening file in Python launcher: %s", file_path);
-        show_python_launcher_screen();
-    }
-
-    // Clean up allocated path
-    free(file_path);
-}
 
 // Clean partition confirmation handlers
 static void clean_cancel_event_handler(lv_event_t *e) {

@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_events.h"
 #include "gui_styles.h"
+#include "gui_state.h"
 #include "gui_screen_python_launcher.h"
 #include "syntax_highlighter.h"
 #include "sd_manager.h"
@@ -49,6 +50,7 @@ static void text_editor_event_handler(lv_event_t *e);
 static void keyboard_event_handler(lv_event_t *e);
 static void save_button_event_handler(lv_event_t *e);
 static void close_button_event_handler(lv_event_t *e);
+static void open_file_button_event_handler(lv_event_t *e);
 static void keyboard_toggle_event_handler(lv_event_t *e);
 static void python_launch_button_event_handler(lv_event_t *e);
 static void search_button_event_handler(lv_event_t *e);
@@ -126,10 +128,22 @@ void create_text_editor_screen(void) {
     lv_label_set_text(close_label, LV_SYMBOL_CLOSE);
     lv_obj_center(close_label);
 
+    // Open File button
+    lv_obj_t *open_btn = lv_button_create(title_bar);
+    lv_obj_set_size(open_btn, 40, 35);
+    lv_obj_align(open_btn, LV_ALIGN_LEFT_MID, 50, 0);
+    apply_button_style(open_btn);
+    lv_obj_set_style_bg_color(open_btn, lv_color_hex(0x3498db), 0); // Blue for open
+    lv_obj_add_event_cb(open_btn, open_file_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *open_label = lv_label_create(open_btn);
+    lv_label_set_text(open_label, LV_SYMBOL_DIRECTORY);
+    lv_obj_center(open_label);
+
     // Save button
     lv_obj_t *save_btn = lv_button_create(title_bar);
     lv_obj_set_size(save_btn, 40, 35);
-    lv_obj_align(save_btn, LV_ALIGN_LEFT_MID, 50, 0);
+    lv_obj_align(save_btn, LV_ALIGN_LEFT_MID, 95, 0);
     apply_button_style(save_btn);
     lv_obj_set_style_bg_color(save_btn, lv_color_hex(0x27ae60), 0);
     lv_obj_add_event_cb(save_btn, save_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -141,7 +155,7 @@ void create_text_editor_screen(void) {
     // Search button
     lv_obj_t *search_btn = lv_button_create(title_bar);
     lv_obj_set_size(search_btn, 40, 35);
-    lv_obj_align(search_btn, LV_ALIGN_LEFT_MID, 95, 0);
+    lv_obj_align(search_btn, LV_ALIGN_LEFT_MID, 140, 0);
     apply_button_style(search_btn);
     lv_obj_set_style_bg_color(search_btn, lv_color_hex(0xf39c12), 0);
     lv_obj_add_event_cb(search_btn, search_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -153,7 +167,7 @@ void create_text_editor_screen(void) {
     // Keyboard toggle button
     lv_obj_t *kb_btn = lv_button_create(title_bar);
     lv_obj_set_size(kb_btn, 40, 35);
-    lv_obj_align(kb_btn, LV_ALIGN_LEFT_MID, 140, 0);
+    lv_obj_align(kb_btn, LV_ALIGN_LEFT_MID, 185, 0);
     apply_button_style(kb_btn);
     lv_obj_set_style_bg_color(kb_btn, lv_color_hex(0x3498db), 0);
     lv_obj_add_event_cb(kb_btn, keyboard_toggle_event_handler, LV_EVENT_CLICKED, NULL);
@@ -165,7 +179,7 @@ void create_text_editor_screen(void) {
     // Syntax highlighting toggle button
     syntax_highlight_btn = lv_button_create(title_bar);
     lv_obj_set_size(syntax_highlight_btn, 40, 35);
-    lv_obj_align(syntax_highlight_btn, LV_ALIGN_LEFT_MID, 185, 0);
+    lv_obj_align(syntax_highlight_btn, LV_ALIGN_LEFT_MID, 230, 0);
     apply_button_style(syntax_highlight_btn);
     lv_obj_set_style_bg_color(syntax_highlight_btn, lv_color_hex(0xe67e22), 0); // Orange for syntax highlighting
     lv_obj_add_event_cb(syntax_highlight_btn, syntax_highlighting_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -177,7 +191,7 @@ void create_text_editor_screen(void) {
     // Python launcher button (only show for .py files)
     lv_obj_t *py_btn = lv_button_create(title_bar);
     lv_obj_set_size(py_btn, 40, 35);
-    lv_obj_align(py_btn, LV_ALIGN_LEFT_MID, 230, 0);
+    lv_obj_align(py_btn, LV_ALIGN_LEFT_MID, 275, 0);
     apply_button_style(py_btn);
     lv_obj_set_style_bg_color(py_btn, lv_color_hex(0x9b59b6), 0);
     lv_obj_add_event_cb(py_btn, python_launch_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -214,7 +228,7 @@ void create_text_editor_screen(void) {
 
     // Text area (main editing area) - adjusted for larger status bar
     text_area = lv_textarea_create(text_editor_screen);
-    lv_obj_set_size(text_area, lv_pct(100), lv_pct(100) - 85); // Account for title and larger status bars
+    lv_obj_set_size(text_area, lv_pct(100), lv_pct(75)); // Use 75% of screen height for text area
     lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 50);
 
     // Style the text area
@@ -331,8 +345,28 @@ esp_err_t text_editor_open_file(const char *file_path) {
         return load_result;
     }
 
-    // Set content in text area
+    // Set content in text area with validation
+    if (text_area == NULL) {
+        ESP_LOGE(TAG, "Text area is NULL, cannot set content");
+        free_file_buffer(content);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (content == NULL) {
+        ESP_LOGE(TAG, "Content is NULL, cannot set text");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_LOGI(TAG, "Setting text area content (%zu bytes)", strlen(content));
+
+    // Ensure LVGL is in a stable state before setting text
+    lv_task_handler();
+
     lv_textarea_set_text(text_area, content);
+
+    // Allow LVGL to process the text setting before continuing
+    lv_task_handler();
+
     free_file_buffer(content);
 
     // Store file information
@@ -348,9 +382,15 @@ esp_err_t text_editor_open_file(const char *file_path) {
     current_file_type = text_editor_get_file_type(file_path);
     syntax_highlighter_set_file_type(current_file_type);
 
-    // Apply syntax highlighting if enabled
-    if (syntax_highlighting_enabled) {
+    // Apply syntax highlighting if enabled (CRITICAL: Skip Python files to prevent crashes)
+    if (syntax_highlighting_enabled && syntax_highlighter_supports_file_type(current_file_type) && current_file_type != TEXT_FILE_PY) {
         apply_syntax_highlighting_internal();
+        update_status("File loaded with syntax highlighting");
+    } else {
+        update_status("File loaded");
+        if (current_file_type == TEXT_FILE_PY) {
+            ESP_LOGI(TAG, "Python syntax highlighting disabled to prevent crashes: %s", file_path);
+        }
     }
 
     // Update status with file information
@@ -514,8 +554,8 @@ static void text_editor_event_handler(lv_event_t *e) {
         file_modified = true;
         update_status("Modified");
 
-        // Reapply syntax highlighting with performance considerations for large files
-        if (syntax_highlighting_enabled) {
+        // Reapply syntax highlighting with performance considerations for large files (CRITICAL: Skip Python files)
+        if (syntax_highlighting_enabled && syntax_highlighter_supports_file_type(current_file_type) && current_file_type != TEXT_FILE_PY) {
             // For large files, debounce syntax highlighting to avoid performance issues
             if (is_large_file) {
                 // In a full implementation, we would use a timer to debounce this
@@ -547,6 +587,43 @@ static void save_button_event_handler(lv_event_t *e) {
     }
 }
 
+static void open_file_button_event_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_CLICKED) {
+        // Safety check: ensure text editor screen still exists
+        if (text_editor_screen == NULL) {
+            ESP_LOGW(TAG, "Event handler called but text editor screen is NULL, ignoring");
+            return;
+        }
+
+        ESP_LOGI(TAG, "Open file button clicked - switching to file manager");
+
+        // Validate file manager screen before switching
+        if (file_manager_screen == NULL) {
+            ESP_LOGW(TAG, "File manager screen is NULL, recreating...");
+            create_file_manager_screen();
+        }
+
+        if (file_manager_screen != NULL) {
+            ESP_LOGI(TAG, "Switching to file manager screen");
+            // CRITICAL FIX: Set current directory to SD card root and update file list
+            strcpy(current_directory, "/");  // Set to SD card root like main menu does
+            update_file_manager_screen();
+            update_file_list();
+
+            // CRITICAL FIX: Load new screen BEFORE destroying current screen
+            lv_screen_load(file_manager_screen);
+
+            // CRITICAL FIX: DO NOT destroy the old screen immediately
+            // Let LVGL fully process the screen switch first
+            ESP_LOGI(TAG, "File manager loaded, text editor screen will be cleaned up later");
+        } else {
+            ESP_LOGE(TAG, "Failed to create file manager screen");
+        }
+    }
+}
+
 static void close_button_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
 
@@ -573,8 +650,25 @@ static void python_launch_button_event_handler(lv_event_t *e) {
 
         // Check if current file is a Python file
         if (strlen(current_file_path) > 0 && python_launcher_is_supported_file(current_file_path)) {
-            ESP_LOGI(TAG, "Opening current Python file in launcher: %s", current_file_path);
-            show_python_launcher_screen();
+            ESP_LOGI(TAG, "Executing current Python file: %s", current_file_path);
+            // Save file first if modified
+            if (file_modified) {
+                esp_err_t save_ret = text_editor_save_file();
+                if (save_ret != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to save file before execution: %s", esp_err_to_name(save_ret));
+                    update_status("Save failed - execution cancelled");
+                    return;
+                }
+            }
+            // Execute the current Python file directly
+            esp_err_t ret = python_launcher_execute_script(current_file_path);
+            if (ret == ESP_OK) {
+                update_status("Python script executed");
+                show_python_launcher_screen(); // Show the launcher to see output
+            } else {
+                ESP_LOGE(TAG, "Failed to execute Python script: %s", esp_err_to_name(ret));
+                update_status("Python execution failed");
+            }
         } else {
             ESP_LOGW(TAG, "Current file is not a Python file or no file loaded");
             update_status("Not a Python file");
@@ -951,12 +1045,16 @@ void text_editor_toggle_syntax_highlighting(void) {
     syntax_highlighting_enabled = !syntax_highlighting_enabled;
     syntax_highlighter_set_enabled(syntax_highlighting_enabled);
 
-    if (syntax_highlighting_enabled) {
+    if (syntax_highlighting_enabled && syntax_highlighter_supports_file_type(current_file_type) && current_file_type != TEXT_FILE_PY) {
         apply_syntax_highlighting_internal();
         update_status("Syntax highlighting enabled");
     } else {
         syntax_highlighter_clear(text_area);
-        update_status("Syntax highlighting disabled");
+        if (current_file_type == TEXT_FILE_PY) {
+            update_status("Python syntax highlighting disabled (prevents crashes)");
+        } else {
+            update_status("Syntax highlighting disabled");
+        }
     }
 
     update_syntax_highlighting_button_color();
@@ -968,7 +1066,7 @@ bool text_editor_is_syntax_highlighting_enabled(void) {
 }
 
 void text_editor_apply_syntax_highlighting(void) {
-    if (syntax_highlighting_enabled) {
+    if (syntax_highlighting_enabled && syntax_highlighter_supports_file_type(current_file_type) && current_file_type != TEXT_FILE_PY) {
         apply_syntax_highlighting_internal();
     }
 }
@@ -979,16 +1077,52 @@ void text_editor_clear_syntax_highlighting(void) {
 
 void destroy_text_editor_screen(void) {
     if (text_editor_screen) {
-        // Clean up syntax highlighter
+        ESP_LOGI(TAG, "Destroying text editor screen...");
+
+        // DEFENSIVE: Check screen validity before destruction
+        if (!lv_obj_is_valid(text_editor_screen)) {
+            ESP_LOGW(TAG, "Text editor screen is invalid, setting to NULL");
+            text_editor_screen = NULL;
+            search_toolbar = NULL;
+            search_input = NULL;
+            search_results_label = NULL;
+            syntax_highlight_btn = NULL;
+            return;
+        }
+
+        // DEFENSIVE: Check if screen is currently active
+        if (lv_screen_active() == text_editor_screen) {
+            ESP_LOGW(TAG, "Destroying active screen - ensuring safe deletion");
+        }
+
+        // Disable events on screen to prevent corruption during deletion
+        lv_obj_remove_event_cb(text_editor_screen, NULL);
+
+        // Clean up syntax highlighter first
         syntax_highlighter_destroy();
 
-        lv_obj_del(text_editor_screen);
+        // Remove all event callbacks from child objects to prevent dangling pointers
+        uint32_t child_cnt = lv_obj_get_child_count(text_editor_screen);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(text_editor_screen, i);
+            if (child && lv_obj_is_valid(child)) {
+                lv_obj_remove_event_cb(child, NULL);
+            }
+        }
+
+        // DEFENSIVE: Final validation before deletion
+        if (lv_obj_is_valid(text_editor_screen)) {
+            lv_obj_del(text_editor_screen);
+            ESP_LOGI(TAG, "Text editor screen destroyed");
+        } else {
+            ESP_LOGW(TAG, "Text editor screen became invalid during cleanup");
+        }
+
         text_editor_screen = NULL;
         search_toolbar = NULL;
         search_input = NULL;
         search_results_label = NULL;
         syntax_highlight_btn = NULL;
-        ESP_LOGI(TAG, "Text editor screen destroyed");
     }
 }
 

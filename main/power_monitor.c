@@ -204,25 +204,25 @@ float power_monitor_get_current_ma(void) {
     }
     
     float current = raw_to_current_ma((int16_t)raw_current);
-    ESP_LOGI(TAG, "Current debug: raw=0x%04x (%d), signed=%d, currentLSB=%.6f, result=%.1fmA", 
+    ESP_LOGV(TAG, "Current debug: raw=0x%04x (%d), signed=%d, currentLSB=%.6f, result=%.1fmA",
              raw_current, raw_current, (int16_t)raw_current, currentLSB, current);
     return current;
 }
 
 bool power_monitor_is_charging(void) {
     float current = power_monitor_get_current_ma();
-    ESP_LOGI(TAG, "Charging detection: current=%.1fmA", current);
-    
+    ESP_LOGV(TAG, "Charging detection: current=%.1fmA", current);
+
     // Negative current indicates charging (power flowing into battery)
     // Positive current indicates discharging (power flowing from battery)
     if (current < -10.0f) {
-        ESP_LOGI(TAG, "Charging detected: %.1fmA into battery", current);
+        ESP_LOGV(TAG, "Charging detected: %.1fmA into battery", current);
         return true;
     } else if (current >= -10.0f && current <= 10.0f) {
-        ESP_LOGI(TAG, "Current near zero (%.1fmA) - likely charging but sensor reads ~0", current);
+        ESP_LOGV(TAG, "Current near zero (%.1fmA) - likely charging but sensor reads ~0", current);
         return true; // Temporary: treat near-zero as charging based on user observation
     } else {
-        ESP_LOGI(TAG, "Discharging: %.1fmA from battery", current);
+        ESP_LOGV(TAG, "Discharging: %.1fmA from battery", current);
         return false;
     }
 }
