@@ -14,6 +14,7 @@
 #include "gui_screens.h"
 #include "power_monitor.h"
 #include "hardware_control.h"
+#include "gui_status_bar.h"
 
 static const char *TAG = "LAUNCHER";
 static uint32_t boot_timer_start = 0;
@@ -98,7 +99,13 @@ void app_main(void) {
     // Initialize GUI
     ESP_LOGI(TAG, "Initializing GUI...");
     gui_manager_init((lv_display_t*)lvDisp);
-    
+
+    // Initialize global status bar on the layer (persists across all screens)
+    ESP_LOGI(TAG, "Initializing global status bar...");
+    if (gui_status_bar_init_global(lv_layer_top()) != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to initialize global status bar");
+    }
+
     ESP_LOGI(TAG, "Launcher initialized successfully");
     
     // Unlock display
@@ -136,27 +143,23 @@ void app_main(void) {
             lv_screen_load(main_screen);
         }
         
-        // Update power readings periodically
+        // Update power readings and time periodically
         uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
         if (current_time - last_power_update >= POWER_UPDATE_INTERVAL_MS) {
             last_power_update = current_time;
-            
+
             float voltage = power_monitor_get_voltage();
             float current_ma = power_monitor_get_current_ma();
             bool charging = power_monitor_is_charging();
-            
+
             ESP_LOGI(TAG, "Power readings: %.2fV, %.1fmA, charging: %s", voltage, current_ma, charging ? "yes" : "no");
-            
-            // Update status bars on all screens
-            lv_obj_t *active_screen = lv_screen_active();
-            if (active_screen == main_screen) {
-                update_status_bar(voltage, current_ma, charging);
-            } else if (active_screen && file_manager_screen && active_screen == file_manager_screen && lv_obj_is_valid(file_manager_screen)) {
-                update_file_manager_status_bar(voltage, current_ma, charging);
-            } else if (active_screen && firmware_loader_screen && active_screen == firmware_loader_screen && lv_obj_is_valid(firmware_loader_screen)) {
-                update_firmware_status_bar(voltage, current_ma, charging);
-            } else if (active_screen && settings_screen && active_screen == settings_screen && lv_obj_is_valid(settings_screen)) {
-                update_settings_status_bar(voltage, current_ma, charging);
+
+            // Update global status bar (now used across all screens)
+            gui_status_bar_t *global_bar = gui_status_bar_get_global();
+            if (global_bar) {
+                gui_status_bar_update_power(global_bar, voltage, current_ma, charging);
+                gui_status_bar_update_sdcard(global_bar);
+                gui_status_bar_update_time(global_bar);
             }
         }
         

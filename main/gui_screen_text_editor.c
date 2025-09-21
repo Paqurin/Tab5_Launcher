@@ -111,7 +111,7 @@ void create_text_editor_screen(void) {
     // Create title bar
     lv_obj_t *title_bar = lv_obj_create(text_editor_screen);
     lv_obj_set_size(title_bar, lv_pct(100), 50);
-    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_set_style_bg_color(title_bar, lv_color_hex(0x2c3e50), 0);
     lv_obj_set_style_border_opa(title_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(title_bar, 5, 0);
@@ -229,7 +229,7 @@ void create_text_editor_screen(void) {
     // Text area (main editing area) - adjusted for larger status bar
     text_area = lv_textarea_create(text_editor_screen);
     lv_obj_set_size(text_area, lv_pct(100), lv_pct(75)); // Use 75% of screen height for text area
-    lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 90);
 
     // Style the text area
     lv_obj_set_style_bg_color(text_area, lv_color_hex(0x1e1e1e), 0);  // Dark background
@@ -750,7 +750,7 @@ static void syntax_highlighting_button_event_handler(lv_event_t *e) {
 static void create_search_toolbar(void) {
     search_toolbar = lv_obj_create(text_editor_screen);
     lv_obj_set_size(search_toolbar, lv_pct(100), 45);
-    lv_obj_align(search_toolbar, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_align(search_toolbar, LV_ALIGN_TOP_MID, 0, 90);
     lv_obj_set_style_bg_color(search_toolbar, lv_color_hex(0x34495e), 0);
     lv_obj_set_style_border_color(search_toolbar, lv_color_hex(0x7f8c8d), 0);
     lv_obj_set_style_border_width(search_toolbar, 1, 0);
@@ -818,14 +818,14 @@ static void toggle_search_toolbar(void) {
     if (search_visible) {
         lv_obj_add_flag(search_toolbar, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_size(text_area, lv_pct(100), lv_pct(100) - 85); // Adjusted for larger status bar
-        lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 50);
+        lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 90);
         search_visible = false;
         clear_search_highlights();
         update_status("Search closed");
     } else {
         lv_obj_clear_flag(search_toolbar, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_size(text_area, lv_pct(100), lv_pct(100) - 130); // Adjusted for larger status bar
-        lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 95);
+        lv_obj_align(text_area, LV_ALIGN_TOP_MID, 0, 135);
         search_visible = true;
         lv_obj_add_state(search_input, LV_STATE_FOCUSED);
         update_status("Search opened");

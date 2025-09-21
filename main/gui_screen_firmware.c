@@ -20,8 +20,7 @@ void create_firmware_loader_screen(void) {
     firmware_loader_screen = lv_obj_create(NULL);
     lv_obj_add_style(firmware_loader_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create status bar at top
-    status_bar = gui_status_bar_create(firmware_loader_screen);
+    // Status bar is now global - no individual creation needed
     
     // Create a centered container for the screen (below status bar)
     lv_obj_t *center_container = lv_obj_create(firmware_loader_screen);

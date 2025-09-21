@@ -39,7 +39,7 @@ void create_calculator_screen(void) {
     // Create title bar
     lv_obj_t *title_bar = lv_obj_create(calculator_screen);
     lv_obj_set_size(title_bar, lv_pct(100), 60);
-    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_set_style_bg_color(title_bar, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_opa(title_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(title_bar, 10, 0);

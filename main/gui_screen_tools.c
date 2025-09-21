@@ -67,10 +67,10 @@ void create_tools_screen(void) {
     tools_screen = lv_obj_create(NULL);
     lv_obj_add_style(tools_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Create title bar
+    // Create title bar (moved down to account for global status bar)
     lv_obj_t *title_bar = lv_obj_create(tools_screen);
     lv_obj_set_size(title_bar, lv_pct(100), 60);
-    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(title_bar, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_set_style_bg_color(title_bar, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_opa(title_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(title_bar, 10, 0);
@@ -93,10 +93,10 @@ void create_tools_screen(void) {
     lv_obj_set_style_text_font(title_label, &lv_font_montserrat_24, 0);
     lv_obj_align(title_label, LV_ALIGN_CENTER, 0, 0);
 
-    // Create main container for tools grid
+    // Create main container for tools grid (moved down to account for global status bar)
     lv_obj_t *tools_container = lv_obj_create(tools_screen);
-    lv_obj_set_size(tools_container, lv_pct(90), lv_pct(80));
-    lv_obj_align(tools_container, LV_ALIGN_CENTER, 0, 30);
+    lv_obj_set_size(tools_container, lv_pct(90), lv_pct(75));
+    lv_obj_align(tools_container, LV_ALIGN_CENTER, 0, 50);
     lv_obj_set_style_bg_opa(tools_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(tools_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_all(tools_container, 20, 0);

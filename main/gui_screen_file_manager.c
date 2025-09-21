@@ -33,8 +33,7 @@ void create_file_manager_screen(void) {
     file_manager_screen = lv_obj_create(NULL);
     lv_obj_add_style(file_manager_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create status bar at top
-    status_bar = gui_status_bar_create(file_manager_screen);
+    // Status bar is now global - no individual creation needed
     
     // Create a centered container for the screen (below status bar)
     lv_obj_t *center_container = lv_obj_create(file_manager_screen);

@@ -38,8 +38,7 @@ void create_wifi_setup_screen(void) {
     wifi_setup_screen = lv_obj_create(NULL);
     lv_obj_add_style(wifi_setup_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
-    // Create persistent status bar
-    status_bar = gui_status_bar_create(wifi_setup_screen);
+    // Status bar is now global - no individual creation needed
     
     // Create main container (adjust position to account for status bar)
     lv_obj_t *main_container = lv_obj_create(wifi_setup_screen);

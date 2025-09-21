@@ -3,6 +3,7 @@
 
 #include "lvgl.h"
 #include <stdbool.h>
+#include "esp_err.h"
 
 /**
  * @brief Status bar component for displaying power, network, and system status
@@ -16,6 +17,9 @@ typedef struct {
     lv_obj_t *charging_label;
     lv_obj_t *sdcard_label;
     lv_obj_t *wifi_label;
+    lv_obj_t *ip_label;
+    lv_obj_t *title_label;
+    lv_obj_t *time_label;
 } gui_status_bar_t;
 
 /**
@@ -67,5 +71,34 @@ void gui_status_bar_set_visible(gui_status_bar_t *status_bar, bool visible);
  * @return LVGL container object
  */
 lv_obj_t* gui_status_bar_get_container(gui_status_bar_t *status_bar);
+
+/**
+ * @brief Update time display in status bar
+ * @param status_bar Status bar to update
+ */
+void gui_status_bar_update_time(gui_status_bar_t *status_bar);
+
+/**
+ * @brief Global status bar instance management
+ */
+extern gui_status_bar_t *global_status_bar;
+
+/**
+ * @brief Initialize global status bar
+ * @param parent Parent object to attach status bar to
+ * @return ESP_OK on success
+ */
+esp_err_t gui_status_bar_init_global(lv_obj_t *parent);
+
+/**
+ * @brief Get global status bar instance
+ * @return Global status bar instance
+ */
+gui_status_bar_t* gui_status_bar_get_global(void);
+
+/**
+ * @brief Cleanup global status bar
+ */
+void gui_status_bar_cleanup_global(void);
 
 #endif // GUI_STATUS_BAR_H
