@@ -202,6 +202,7 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
     if (status_bar->voltage_label) {
         sprintf(voltage_str, "%.2f", voltage);
         lv_label_set_text(status_bar->voltage_label, voltage_str);
+        lv_obj_invalidate(status_bar->voltage_label);
     }
 
     if (status_bar->current_label) {
@@ -212,6 +213,7 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
             sprintf(current_str, "-%.0f", fabsf(current_ma));
         }
         lv_label_set_text(status_bar->current_label, current_str);
+        lv_obj_invalidate(status_bar->current_label);
     }
 
     if (status_bar->charging_label) {
@@ -231,6 +233,7 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
             lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_1);
             lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFF0000), 0);
         }
+        lv_obj_invalidate(status_bar->charging_label);
     }
 }
 
@@ -250,6 +253,7 @@ void gui_status_bar_update_wifi(gui_status_bar_t *status_bar, bool connected, in
         // Disconnected - gray
         lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0x666666), 0);
     }
+    lv_obj_invalidate(status_bar->wifi_label);
 }
 
 void gui_status_bar_update_sdcard(gui_status_bar_t *status_bar) {
@@ -268,6 +272,7 @@ void gui_status_bar_update_sdcard(gui_status_bar_t *status_bar) {
         // No card detected - show gray SD card symbol
         lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0x666666), 0);
     }
+    lv_obj_invalidate(status_bar->sdcard_label);
 }
 
 void gui_status_bar_set_visible(gui_status_bar_t *status_bar, bool visible) {
@@ -297,6 +302,7 @@ void gui_status_bar_update_time(gui_status_bar_t *status_bar) {
             local_time->tm_sec);
 
     lv_label_set_text(status_bar->time_label, time_str);
+    lv_obj_invalidate(status_bar->time_label);
 }
 
 esp_err_t gui_status_bar_init_global(lv_obj_t *parent) {

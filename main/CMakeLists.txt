@@ -26,7 +26,7 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.cpp" "gui
                             "firmware_scanner.c"
                             "firmware_boot.c"
                             "gui_manager.c"
-                            "power_monitor.c"
+                            "power_monitor.cpp"
                     INCLUDE_DIRS "."
                     REQUIRES micropython_wrapper m5stack-tab5 esp_app_format M5unified-ESP32P4 M5GFX-Tab5
                     PRIV_REQUIRES spiffs json app_update efuse)

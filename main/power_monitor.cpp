@@ -1,7 +1,9 @@
+#include "M5Unified.h"
+
+extern "C" {
 #include "power_monitor.h"
-#include "bsp/m5stack_tab5.h"
 #include "esp_log.h"
-#include "driver/i2c_master.h"
+}
 
 static const char *TAG = "POWER_MONITOR";
 
@@ -16,7 +18,6 @@ static const char *TAG = "POWER_MONITOR";
 #define INA226_REG_CURRENT   0x04
 #define INA226_REG_CALIB     0x05
 
-static i2c_master_dev_handle_t ina226_dev = NULL;
 static bool initialized = false;
 static float currentLSB = 0.0f;
 static float powerLSB = 0.0f;
@@ -34,34 +35,39 @@ static float raw_to_current_ma(int16_t raw) {
 }
 
 static bool ina226_read_register(uint8_t reg, uint16_t *value) {
-    if (!ina226_dev || !value) {
+    if (!value) {
+        ESP_LOGD(TAG, "Invalid parameters for register read: value=%p", value);
         return false;
     }
-    
+
+    // Read 2 bytes from the register using M5Unified's I2C interface
     uint8_t data[2];
-    esp_err_t ret = i2c_master_transmit_receive(ina226_dev, &reg, 1, data, 2, 100);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to read register 0x%02x: %s", reg, esp_err_to_name(ret));
+    bool success = M5.In_I2C.readRegister(INA226_ADDR, reg, data, 2, 100000);  // 100ms timeout
+    if (!success) {
+        ESP_LOGD(TAG, "I2C read failed for register 0x%02x", reg);
         return false;
     }
-    
+
     // INA226 uses big-endian format
     *value = (data[0] << 8) | data[1];
+    ESP_LOGV(TAG, "Read register 0x%02x: 0x%04x (raw bytes: 0x%02x 0x%02x)", reg, *value, data[0], data[1]);
     return true;
 }
 
 static bool ina226_write_register(uint8_t reg, uint16_t value) {
-    if (!ina226_dev) {
+    // Prepare data in big-endian format for INA226
+    uint8_t data[2] = {
+        (uint8_t)((value >> 8) & 0xFF),  // High byte
+        (uint8_t)(value & 0xFF)          // Low byte
+    };
+
+    // Use M5Unified's I2C interface for writing
+    bool success = M5.In_I2C.writeRegister(INA226_ADDR, reg, data, 2, 100000);  // 100ms timeout
+    if (!success) {
+        ESP_LOGW(TAG, "Failed to write register 0x%02x", reg);
         return false;
     }
-    
-    uint8_t data[3] = {reg, (value >> 8) & 0xFF, value & 0xFF};
-    esp_err_t ret = i2c_master_transmit(ina226_dev, data, 3, 100);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to write register 0x%02x: %s", reg, esp_err_to_name(ret));
-        return false;
-    }
-    
+
     return true;
 }
 
@@ -103,36 +109,21 @@ static bool ina226_calibrate(float shunt_resistor, float max_expected_current) {
     return result;
 }
 
+// Removed power_i2c_bus - using M5Unified I2C interface instead
+
 static bool ina226_init_device(void) {
-    // Use M5Unified's existing I2C bus handle instead of creating a new one
-    i2c_master_bus_handle_t i2c_bus = bsp_i2c_get_handle();
-    if (i2c_bus == NULL) {
-        ESP_LOGE(TAG, "I2C bus not available from BSP - M5Unified may not be initialized");
-        return false;
-    }
+    // Use M5Unified's I2C interface instead of creating our own bus
+    // This avoids I2C bus conflicts that cause communication failures
+    ESP_LOGI(TAG, "Using M5Unified I2C interface for power monitoring");
 
-    ESP_LOGI(TAG, "Using shared I2C bus handle from M5Unified/BSP");
-
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = INA226_ADDR,
-        .scl_speed_hz = 400000,
-    };
-
-    esp_err_t ret = i2c_master_bus_add_device(i2c_bus, &dev_cfg, &ina226_dev);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to add I2C device at 0x%02x: %s", INA226_ADDR, esp_err_to_name(ret));
-        return false;
-    }
-    
-    // Try to read configuration register to test communication
+    // Test communication with INA226 using direct register read
+    ESP_LOGI(TAG, "Testing INA226 communication by reading config register...");
     uint16_t config;
     if (!ina226_read_register(INA226_REG_CONFIG, &config)) {
-        i2c_master_bus_rm_device(ina226_dev);
-        ina226_dev = NULL;
+        ESP_LOGE(TAG, "Failed to communicate with INA226 at address 0x%02x", INA226_ADDR);
         return false;
     }
-    
+
     ESP_LOGI(TAG, "Found INA226 at address 0x%02x, config: 0x%04x", INA226_ADDR, config);
     
     // Configure INA226 based on M5Stack UserDemo settings
@@ -151,6 +142,8 @@ static bool ina226_init_device(void) {
     
     return true;
 }
+
+extern "C" {
 
 bool power_monitor_init(void) {
     if (initialized) {
@@ -175,7 +168,7 @@ bool power_monitor_init(void) {
 }
 
 float power_monitor_get_voltage(void) {
-    if (!initialized || !ina226_dev) {
+    if (!initialized) {
         ESP_LOGW(TAG, "Power monitor not initialized, returning default voltage");
         return 8.23f; // Return a reasonable default value for testing
     }
@@ -192,7 +185,7 @@ float power_monitor_get_voltage(void) {
 }
 
 float power_monitor_get_current_ma(void) {
-    if (!initialized || !ina226_dev) {
+    if (!initialized) {
         ESP_LOGW(TAG, "Power monitor not initialized, returning default current");
         return 410.0f; // Return a reasonable default value for testing
     }
@@ -226,3 +219,5 @@ bool power_monitor_is_charging(void) {
         return false;
     }
 }
+
+} // extern "C"
