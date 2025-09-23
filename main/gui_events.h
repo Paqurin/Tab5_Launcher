@@ -3,6 +3,10 @@
 
 #include "lvgl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Main menu button event handler
  */
@@ -81,5 +85,9 @@ void file_browser_v2_prev_page_handler(lv_event_t *e);
 void file_browser_v2_next_page_handler(lv_event_t *e);
 void file_browser_v2_item_click_handler(lv_event_t *e);
 void file_browser_v2_multi_select_handler(lv_event_t *e);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // GUI_EVENTS_H

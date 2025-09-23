@@ -3,6 +3,7 @@
 #include "gui_events.h"
 #include "gui_styles.h"
 #include "gui_screen_tools.h"
+#include "gui_animation_manager.h"
 #include "sd_manager.h"
 #include "python_engine.h"
 #include "file_operations.h"
@@ -203,7 +204,7 @@ static void update_output(const char *message) {
     lv_textarea_set_text(output_area, new_text);
 
     // Scroll to bottom
-    lv_obj_scroll_to_y(output_area, LV_COORD_MAX, LV_ANIM_ON);
+    lv_obj_scroll_to_y(output_area, LV_COORD_MAX, gui_animation_manager_get_anim_flag());
 }
 
 esp_err_t python_launcher_execute_script(const char *script_path) {

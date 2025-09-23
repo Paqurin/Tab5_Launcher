@@ -17,4 +17,10 @@ dependencies:
   espressif/esp_lvgl_port: ^2.6.0
   # Removed m5stack-tab5 managed component - using local component in ./components/ instead
   espressif/esp_lcd_ili9881c: '*'
+  # M5Unified ESP32-P4 port for Tab5 RTC functionality
+  Paqurin/M5unified-ESP32P4:
+    git: https://github.com/Paqurin/M5unified-ESP32P4.git
+  # M5GFX ESP32-P4 port for Tab5 graphics
+  Paqurin/M5GFX-Tab5:
+    git: https://github.com/Paqurin/M5GFX-Tab5.git
 

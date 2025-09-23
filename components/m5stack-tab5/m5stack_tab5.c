@@ -106,7 +106,16 @@ esp_err_t bsp_i2c_init(void)
         .i2c_port                     = BSP_I2C_NUM,
         .flags.enable_internal_pullup = true,
     };
-    BSP_ERROR_CHECK_RETURN_ERR(i2c_new_master_bus(&i2c_bus_conf, &i2c_handle));
+
+    esp_err_t ret = i2c_new_master_bus(&i2c_bus_conf, &i2c_handle);
+    if (ret == ESP_ERR_INVALID_STATE) {
+        // I2C bus already acquired by another component (e.g., M5Unified)
+        // This is not an error in our use case
+        i2c_initialized = true;
+        return ESP_ERR_INVALID_STATE; // Return the state to caller
+    } else if (ret != ESP_OK) {
+        return ret;
+    }
 
     i2c_initialized = true;
 
@@ -807,8 +816,11 @@ esp_codec_dev_handle_t bsp_audio_codec_speaker_init(void)
     }
 
     if (i2s_data_if == NULL) {
-        /* Initilize I2C */
-        bsp_i2c_init();
+        /* Initialize I2C (ignore if already initialized by M5Unified) */
+        esp_err_t i2c_ret = bsp_i2c_init();
+        if (i2c_ret != ESP_OK && i2c_ret != ESP_ERR_INVALID_STATE) {
+            return NULL;
+        }
         /* Configure I2S peripheral and Power Amplifier */
         bsp_audio_init(NULL);
     }
@@ -853,8 +865,11 @@ esp_codec_dev_handle_t bsp_audio_codec_speaker_init(void)
 esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void)
 {
     if (i2s_data_if == NULL) {
-        /* Initilize I2C */
-        ESP_ERROR_CHECK(bsp_i2c_init());
+        /* Initialize I2C (ignore if already initialized by M5Unified) */
+        esp_err_t i2c_ret = bsp_i2c_init();
+        if (i2c_ret != ESP_OK && i2c_ret != ESP_ERR_INVALID_STATE) {
+            return NULL;
+        }
         /* Configure I2S peripheral and Power Amplifier */
         ESP_ERROR_CHECK(bsp_audio_init(NULL));
         // i2s_data_if = bsp_get_codec_data_if();
@@ -873,7 +888,7 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void)
     es7210_codec_cfg_t es7210_cfg = {
         .ctrl_if = i2c_ctrl_if,  // Codec Control interface
     };
-    es7210_cfg.mic_selected            = ES7120_SEL_MIC1 | ES7120_SEL_MIC2 | ES7120_SEL_MIC3 | ES7120_SEL_MIC4;
+    es7210_cfg.mic_selected            = ES7210_SEL_MIC1 | ES7210_SEL_MIC2 | ES7210_SEL_MIC3 | ES7210_SEL_MIC4;
     const audio_codec_if_t* es7210_dev = es7210_codec_new(&es7210_cfg);
     BSP_NULL_CHECK(es7210_dev, NULL);
 
@@ -1255,8 +1270,11 @@ err:
 
 esp_err_t bsp_touch_new(const bsp_touch_config_t* config, esp_lcd_touch_handle_t* ret_touch)
 {
-    /* Initilize I2C */
-    BSP_ERROR_CHECK_RETURN_ERR(bsp_i2c_init());
+    /* Initialize I2C (ignore if already initialized by M5Unified) */
+    esp_err_t i2c_ret = bsp_i2c_init();
+    if (i2c_ret != ESP_OK && i2c_ret != ESP_ERR_INVALID_STATE) {
+        return i2c_ret;
+    }
 
     /* Initialize touch */
     const esp_lcd_touch_config_t tp_cfg = {

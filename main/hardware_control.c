@@ -24,6 +24,16 @@ esp_err_t hardware_control_init(void)
 
     ESP_LOGI(TAG, "Initializing hardware control system");
 
+    // Initialize the IO expanders first - they need the I2C bus handle from M5Unified
+    i2c_master_bus_handle_t i2c_bus = bsp_i2c_get_handle();
+    if (i2c_bus == NULL) {
+        ESP_LOGE(TAG, "I2C bus not available from BSP - M5Unified must be initialized first");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Initializing IO expanders for hardware control");
+    bsp_io_expander_pi4ioe_init(i2c_bus);
+
     // Initialize with default states
     esp_err_t ret;
 

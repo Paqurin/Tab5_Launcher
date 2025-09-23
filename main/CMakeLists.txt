@@ -1,4 +1,4 @@
-idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.c" "gui_file_browser_v2.c" "config_manager.c" "file_operations.c" "gui_screen_reboot.c" "gui_state.c"
+idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.cpp" "gui_file_browser_v2.c" "config_manager.c" "file_operations.c" "gui_screen_reboot.c" "gui_state.c"
                             "gui_progress.c"
                             "gui_events.c"
                             "gui_screens.c"
@@ -16,10 +16,11 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.c" "gui_f
                             "gui_screen_switches.c"
                             "hardware_control.c"
                             "gui_status_bar.c"
+                            "gui_animation_manager.c"
                             "python_engine.c"
                             "screenshot_util.c"
-                            "launcher_main.c"
-                            "hal.c"
+                            "launcher_main.cpp"
+                            "hal.cpp"
                             "sd_manager.c"
                             "firmware_core.c"
                             "firmware_scanner.c"
@@ -27,5 +28,5 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.c" "gui_f
                             "gui_manager.c"
                             "power_monitor.c"
                     INCLUDE_DIRS "."
-                    REQUIRES micropython_wrapper m5stack-tab5 esp_app_format
+                    REQUIRES micropython_wrapper m5stack-tab5 esp_app_format M5unified-ESP32P4 M5GFX-Tab5
                     PRIV_REQUIRES spiffs json app_update efuse)

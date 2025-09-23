@@ -10,6 +10,10 @@
 #define MAX_PATH_LENGTH 256
 #define MAX_FILENAME_DISPLAY 40
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // File browser state
 typedef struct {
     char current_path[MAX_PATH_LENGTH];
@@ -143,5 +147,9 @@ void gui_file_browser_v2_format_size(size_t size, char *buffer, size_t buffer_si
  * @param buffer_size Size of buffer
  */
 void gui_file_browser_v2_format_date(uint32_t timestamp, char *buffer, size_t buffer_size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // GUI_FILE_BROWSER_V2_H

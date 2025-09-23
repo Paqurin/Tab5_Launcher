@@ -104,18 +104,21 @@ static bool ina226_calibrate(float shunt_resistor, float max_expected_current) {
 }
 
 static bool ina226_init_device(void) {
+    // Use M5Unified's existing I2C bus handle instead of creating a new one
     i2c_master_bus_handle_t i2c_bus = bsp_i2c_get_handle();
     if (i2c_bus == NULL) {
-        ESP_LOGE(TAG, "I2C bus not initialized");
+        ESP_LOGE(TAG, "I2C bus not available from BSP - M5Unified may not be initialized");
         return false;
     }
-    
+
+    ESP_LOGI(TAG, "Using shared I2C bus handle from M5Unified/BSP");
+
     i2c_device_config_t dev_cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = INA226_ADDR,
         .scl_speed_hz = 400000,
     };
-    
+
     esp_err_t ret = i2c_master_bus_add_device(i2c_bus, &dev_cfg, &ina226_dev);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to add I2C device at 0x%02x: %s", INA226_ADDR, esp_err_to_name(ret));
@@ -154,14 +157,11 @@ bool power_monitor_init(void) {
         ESP_LOGI(TAG, "Power monitor already initialized");
         return true;
     }
-    
-    // Initialize I2C if not already done
-    esp_err_t ret = bsp_i2c_init();
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(TAG, "Failed to initialize I2C: %s", esp_err_to_name(ret));
-        return false;
-    }
-    
+
+    // Don't initialize I2C - use M5Unified's shared bus instead
+    // M5Unified should have already initialized I2C before we're called
+    ESP_LOGI(TAG, "Using M5Unified's shared I2C bus for power monitoring");
+
     // Try to initialize INA226 at the known M5Stack Tab5 address
     ESP_LOGI(TAG, "Initializing INA226 at address 0x%02x", INA226_ADDR);
     if (ina226_init_device()) {
@@ -169,7 +169,7 @@ bool power_monitor_init(void) {
         ESP_LOGI(TAG, "INA226 initialized successfully - currentLSB=%.6f, powerLSB=%.6f", currentLSB, powerLSB);
         return true;
     }
-    
+
     ESP_LOGE(TAG, "INA226 not found at address 0x%02x", INA226_ADDR);
     return false;
 }

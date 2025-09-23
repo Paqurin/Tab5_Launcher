@@ -12,17 +12,9 @@
 static const char *TAG = "GUI_MAIN";
 
 lv_obj_t *main_screen = NULL;
-static gui_pulldown_menu_t *pulldown_menu = NULL;
+// Pulldown menu is now handled by global status bar
 
-static lv_obj_t *status_bar_voltage = NULL;
-static lv_obj_t *status_bar_voltage_unit = NULL;
-static lv_obj_t *status_bar_current = NULL;
-static lv_obj_t *status_bar_current_unit = NULL;
-static lv_obj_t *status_bar_charging = NULL;
-static lv_obj_t *status_bar_sdcard = NULL;
-
-// Forward declaration for status bar click handler
-static void status_bar_click_handler(lv_event_t *e);
+// Status bar components are now handled by global status bar
 
 void create_main_screen(void) {
     main_screen = lv_obj_create(NULL);
@@ -175,20 +167,10 @@ void create_main_screen(void) {
     lv_label_set_text(settings_label, LV_SYMBOL_SETTINGS " Settings");
     lv_obj_center(settings_label);
     
-    // Create pulldown menu (initially hidden)
-    pulldown_menu = gui_pulldown_menu_create(main_screen);
-    if (!pulldown_menu) {
-        ESP_LOGE(TAG, "Failed to create pulldown menu");
-    }
+    // Pulldown menu is now created and managed by global status bar
 }
 
-// Status bar click handler to show pulldown menu
-static void status_bar_click_handler(lv_event_t *e) {
-    ESP_LOGI(TAG, "Status bar clicked - toggling pulldown menu");
-    if (pulldown_menu) {
-        gui_pulldown_menu_toggle(pulldown_menu);
-    }
-}
+// Status bar click handler is now handled by global status bar
 
 void update_status_bar(float voltage, float current_ma, bool charging) {
     // Status bar updates now handled by global status bar in main loop

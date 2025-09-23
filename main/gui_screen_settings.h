@@ -3,6 +3,10 @@
 
 #include "lvgl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Create the settings screen
  */
@@ -18,5 +22,9 @@ lv_obj_t* get_settings_screen(void);
  * @brief Destroy the settings screen and free resources
  */
 void destroy_settings_screen(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // GUI_SCREEN_SETTINGS_H

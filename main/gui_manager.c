@@ -2,6 +2,7 @@
 #include "gui_screens.h"
 #include "gui_progress.h"
 #include "gui_state.h"
+#include "gui_animation_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -24,9 +25,12 @@ esp_err_t gui_manager_init(lv_display_t *disp) {
         }
     }
     
+    // Initialize global animation manager
+    gui_animation_manager_init();
+
     // Initialize progress handling
     gui_progress_init();
-    
+
     // Create all screens
     gui_screens_init();
     

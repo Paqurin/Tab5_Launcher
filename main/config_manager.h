@@ -15,6 +15,10 @@
 #define DEFAULT_THEME "dark"
 #define DEFAULT_LANGUAGE "en"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // File browser preferences
 typedef enum {
     VIEW_MODE_LIST,
@@ -178,5 +182,9 @@ launcher_config_t* config_manager_get_current(void);
  * @return true if SPIFFS is ready, false otherwise
  */
 bool config_manager_is_ready(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CONFIG_MANAGER_H

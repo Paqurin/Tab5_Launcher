@@ -1,5 +1,6 @@
 #include "gui_status_bar.h"
 #include "gui_styles.h"
+#include "gui_pulldown_menu.h"
 #include "sd_manager.h"
 // #include "wifi_manager.h"  // Temporarily disabled for flicker testing
 #include "esp_log.h"
@@ -12,6 +13,15 @@ static const char *TAG = "GUI_STATUS_BAR";
 
 // Global status bar instance
 gui_status_bar_t *global_status_bar = NULL;
+
+// Status bar click handler to show pulldown menu
+static void status_bar_click_handler(lv_event_t *e) {
+    ESP_LOGI(TAG, "Status bar clicked - toggling pulldown menu");
+    gui_status_bar_t *status_bar = (gui_status_bar_t*)lv_event_get_user_data(e);
+    if (status_bar && status_bar->pulldown_menu) {
+        gui_pulldown_menu_toggle(status_bar->pulldown_menu);
+    }
+}
 
 gui_status_bar_t* gui_status_bar_create(lv_obj_t *parent) {
     ESP_LOGI(TAG, "Creating persistent status bar");
@@ -32,6 +42,7 @@ gui_status_bar_t* gui_status_bar_create(lv_obj_t *parent) {
 
     // Make status bar clickable for pulldown menu functionality
     lv_obj_add_flag(status_bar->container, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(status_bar->container, status_bar_click_handler, LV_EVENT_CLICKED, status_bar);
 
     // Create container for right-aligned status info
     lv_obj_t *status_container = lv_obj_create(status_bar->container);
@@ -81,11 +92,23 @@ gui_status_bar_t* gui_status_bar_create(lv_obj_t *parent) {
     lv_obj_set_style_text_color(status_bar->title_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(status_bar->title_label, &lv_font_montserrat_18, 0);
 
-    // Digital clock (HH:MM:SS)
+    // Left pipe for center section
+    lv_obj_t *center_left_pipe = lv_label_create(center_container);
+    lv_label_set_text(center_left_pipe, "|");
+    lv_obj_set_style_text_color(center_left_pipe, lv_color_hex(0x666666), 0);
+    lv_obj_set_style_text_font(center_left_pipe, &lv_font_montserrat_20, 0);
+
+    // Digital clock (HH:MM:SS) - larger text
     status_bar->time_label = lv_label_create(center_container);
     lv_label_set_text(status_bar->time_label, "00:00:00");
     lv_obj_set_style_text_color(status_bar->time_label, lv_color_hex(0x4A90E2), 0); // Blue color
-    lv_obj_set_style_text_font(status_bar->time_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(status_bar->time_label, &lv_font_montserrat_20, 0); // Larger font
+
+    // Right pipe for center section
+    lv_obj_t *center_right_pipe = lv_label_create(center_container);
+    lv_label_set_text(center_right_pipe, "|");
+    lv_obj_set_style_text_color(center_right_pipe, lv_color_hex(0x666666), 0);
+    lv_obj_set_style_text_font(center_right_pipe, &lv_font_montserrat_20, 0);
 
     // Left pipe symbol
     lv_obj_t *left_pipe = lv_label_create(status_container);
@@ -147,6 +170,12 @@ gui_status_bar_t* gui_status_bar_create(lv_obj_t *parent) {
     lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(status_bar->charging_label, &lv_font_montserrat_20, 0);
 
+    // Create pulldown menu (initially hidden)
+    status_bar->pulldown_menu = gui_pulldown_menu_create(parent);
+    if (!status_bar->pulldown_menu) {
+        ESP_LOGE(TAG, "Failed to create pulldown menu");
+    }
+
     ESP_LOGI(TAG, "Persistent status bar created successfully");
     return status_bar;
 }
@@ -154,6 +183,9 @@ gui_status_bar_t* gui_status_bar_create(lv_obj_t *parent) {
 void gui_status_bar_destroy(gui_status_bar_t *status_bar) {
     if (status_bar) {
         ESP_LOGI(TAG, "Destroying status bar");
+        if (status_bar->pulldown_menu) {
+            gui_pulldown_menu_destroy(status_bar->pulldown_menu);
+        }
         if (status_bar->container) {
             lv_obj_del(status_bar->container);
         }

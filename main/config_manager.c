@@ -108,7 +108,10 @@ esp_err_t config_manager_init(void) {
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "No valid configuration found, creating defaults");
         set_default_config(&current_config);
+        ESP_LOGI(TAG, "Default config created - SD auto-mount: %s", current_config.system.auto_mount_sd ? "enabled" : "disabled");
         config_manager_save(&current_config);
+    } else {
+        ESP_LOGI(TAG, "Configuration loaded successfully - SD auto-mount: %s", current_config.system.auto_mount_sd ? "enabled" : "disabled");
     }
     
     ESP_LOGI(TAG, "Configuration manager initialized successfully");

@@ -17,7 +17,7 @@ void gui_styles_init(void) {
     lv_style_set_bg_color(&style_screen, THEME_BG_COLOR);
     lv_style_set_bg_opa(&style_screen, LV_OPA_COVER);
 
-    // Button style - Modern, larger appearance
+    // Button style - Modern, larger appearance (shadows disabled to fix artifacts)
     lv_style_init(&style_button);
     lv_style_set_bg_color(&style_button, lv_color_hex(0x2E2E2E));
     lv_style_set_bg_opa(&style_button, LV_OPA_COVER);
@@ -28,18 +28,17 @@ void gui_styles_init(void) {
     lv_style_set_text_color(&style_button, lv_color_hex(0xFFFFFF));
     lv_style_set_text_font(&style_button, &lv_font_montserrat_24);
     lv_style_set_pad_all(&style_button, 16);
-    lv_style_set_shadow_width(&style_button, 10);
-    lv_style_set_shadow_color(&style_button, lv_color_hex(0x000000));
-    lv_style_set_shadow_opa(&style_button, LV_OPA_30);
+    // Shadows disabled to fix visual artifacts with RGB565 byte swap
+    lv_style_set_shadow_width(&style_button, 0);
 
-    // Button pressed style - Enhanced feedback
+    // Button pressed style - Enhanced feedback (shadows disabled to fix artifacts)
     lv_style_init(&style_button_pressed);
     lv_style_set_bg_color(&style_button_pressed, lv_color_hex(0x4A90E2));
     lv_style_set_bg_opa(&style_button_pressed, LV_OPA_50);
     lv_style_set_border_color(&style_button_pressed, lv_color_hex(0x6BB3FF));
     lv_style_set_border_width(&style_button_pressed, 4);
-    lv_style_set_shadow_width(&style_button_pressed, 15);
-    lv_style_set_shadow_opa(&style_button_pressed, LV_OPA_50);
+    // Shadows disabled to fix visual artifacts with RGB565 byte swap
+    lv_style_set_shadow_width(&style_button_pressed, 0);
 
     // List style - Modern container appearance
     lv_style_init(&style_list);
@@ -50,9 +49,8 @@ void gui_styles_init(void) {
     lv_style_set_border_opa(&style_list, LV_OPA_COVER);
     lv_style_set_radius(&style_list, 10);
     lv_style_set_pad_all(&style_list, 8);
-    lv_style_set_shadow_width(&style_list, 8);
-    lv_style_set_shadow_color(&style_list, lv_color_hex(0x000000));
-    lv_style_set_shadow_opa(&style_list, LV_OPA_20);
+    // Shadows disabled to fix visual artifacts with RGB565 byte swap
+    lv_style_set_shadow_width(&style_list, 0);
 
     // List item style - Modern item appearance
     lv_style_init(&style_list_item);

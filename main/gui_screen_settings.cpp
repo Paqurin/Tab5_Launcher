@@ -4,17 +4,21 @@
 #include "gui_styles.h"
 #include "gui_status_bar.h"
 #include "gui_file_browser_v2.h"
+#include "gui_animation_manager.h"
 #include "config_manager.h"
 #include "bsp/m5stack_tab5.h"
 #include "esp_log.h"
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
+#include <sys/time.h>
+#include "M5Unified.h"
 
 static const char *TAG = "GUI_SETTINGS";
 
 // Screen objects (declared extern in gui_screens.h)
 lv_obj_t *settings_screen = NULL;
-static lv_obj_t *settings_container = NULL;
+// static lv_obj_t *settings_container = NULL;
 static lv_obj_t *tabview = NULL;
 static gui_status_bar_t *status_bar = NULL;
 
@@ -37,6 +41,13 @@ static lv_obj_t *theme_dropdown = NULL;
 // Note: Color picker will be implemented in future update
 // static lv_obj_t *primary_color_picker = NULL;
 
+// Date/Time settings controls
+static lv_obj_t *year_spinbox = NULL;
+static lv_obj_t *month_spinbox = NULL;
+static lv_obj_t *day_spinbox = NULL;
+static lv_obj_t *hour_spinbox = NULL;
+static lv_obj_t *minute_spinbox = NULL;
+
 // Control IDs for event handling
 typedef enum {
     SETTINGS_BRIGHTNESS,
@@ -51,6 +62,12 @@ typedef enum {
     SETTINGS_ITEMS_PER_PAGE,
     SETTINGS_THEME,
     SETTINGS_PRIMARY_COLOR,
+    SETTINGS_SET_TIME,
+    SETTINGS_YEAR_SPINBOX,
+    SETTINGS_MONTH_SPINBOX,
+    SETTINGS_DAY_SPINBOX,
+    SETTINGS_HOUR_SPINBOX,
+    SETTINGS_MINUTE_SPINBOX,
     SETTINGS_RESET_DEFAULTS,
     SETTINGS_BACKUP_CONFIG,
     SETTINGS_RESTORE_CONFIG
@@ -64,6 +81,59 @@ static void create_backup_tab(lv_obj_t *parent);
 static void settings_event_handler(lv_event_t *e);
 static void apply_current_config_to_ui(void);
 static void save_settings(void);
+
+// Spinbox button event handlers
+/* Unused event handlers - commenting out to fix compilation warnings
+static void year_inc_event_handler(lv_event_t *e) {
+    lv_spinbox_increment(year_spinbox);
+    lv_event_send(year_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void year_dec_event_handler(lv_event_t *e) {
+    lv_spinbox_decrement(year_spinbox);
+    lv_event_send(year_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void month_inc_event_handler(lv_event_t *e) {
+    lv_spinbox_increment(month_spinbox);
+    lv_event_send(month_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void month_dec_event_handler(lv_event_t *e) {
+    lv_spinbox_decrement(month_spinbox);
+    lv_event_send(month_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void day_inc_event_handler(lv_event_t *e) {
+    lv_spinbox_increment(day_spinbox);
+    lv_event_send(day_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void day_dec_event_handler(lv_event_t *e) {
+    lv_spinbox_decrement(day_spinbox);
+    lv_event_send(day_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void hour_inc_event_handler(lv_event_t *e) {
+    lv_spinbox_increment(hour_spinbox);
+    lv_event_send(hour_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void hour_dec_event_handler(lv_event_t *e) {
+    lv_spinbox_decrement(hour_spinbox);
+    lv_event_send(hour_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void minute_inc_event_handler(lv_event_t *e) {
+    lv_spinbox_increment(minute_spinbox);
+    lv_event_send(minute_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void minute_dec_event_handler(lv_event_t *e) {
+    lv_spinbox_decrement(minute_spinbox);
+    lv_event_send(minute_spinbox, LV_EVENT_VALUE_CHANGED, NULL);
+}
+*/
 
 void create_settings_screen(void) {
     if (settings_screen) {
@@ -125,7 +195,7 @@ void create_settings_screen(void) {
     
     // Create tabs
     lv_obj_t *system_tab = lv_tabview_add_tab(tabview, "System");
-    lv_obj_t *browser_tab = lv_tabview_add_tab(tabview, "Browser");
+    lv_obj_t *browser_tab = lv_tabview_add_tab(tabview, "File Browser");
     lv_obj_t *theme_tab = lv_tabview_add_tab(tabview, "Theme");
     lv_obj_t *backup_tab = lv_tabview_add_tab(tabview, "Backup");
     
@@ -155,7 +225,7 @@ static void create_system_tab(lv_obj_t *parent) {
     // Brightness setting
     lv_obj_t *brightness_label = lv_label_create(cont);
     lv_label_set_text(brightness_label, "Screen Brightness");
-    lv_obj_set_style_text_font(brightness_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(brightness_label);
     lv_obj_align(brightness_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     brightness_slider = lv_slider_create(cont);
@@ -169,7 +239,7 @@ static void create_system_tab(lv_obj_t *parent) {
     // Screen timeout setting
     lv_obj_t *timeout_label = lv_label_create(cont);
     lv_label_set_text(timeout_label, "Screen Timeout");
-    lv_obj_set_style_text_font(timeout_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(timeout_label);
     lv_obj_align(timeout_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     timeout_dropdown = lv_dropdown_create(cont);
@@ -183,7 +253,7 @@ static void create_system_tab(lv_obj_t *parent) {
     // Animations setting
     lv_obj_t *anim_label = lv_label_create(cont);
     lv_label_set_text(anim_label, "Enable Animations");
-    lv_obj_set_style_text_font(anim_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(anim_label);
     lv_obj_align(anim_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     animations_switch = lv_switch_create(cont);
@@ -195,13 +265,210 @@ static void create_system_tab(lv_obj_t *parent) {
     // Auto-mount SD setting
     lv_obj_t *mount_label = lv_label_create(cont);
     lv_label_set_text(mount_label, "Auto-mount SD Card");
-    lv_obj_set_style_text_font(mount_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(mount_label);
     lv_obj_align(mount_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     auto_mount_switch = lv_switch_create(cont);
     lv_obj_align(auto_mount_switch, LV_ALIGN_TOP_RIGHT, -20, y_offset);
     lv_obj_add_event_cb(auto_mount_switch, settings_event_handler, LV_EVENT_VALUE_CHANGED,
                         (void*)SETTINGS_AUTO_MOUNT);
+    y_offset += 60;
+
+    // Date & Time setting section
+    lv_obj_t *datetime_label = lv_label_create(cont);
+    lv_label_set_text(datetime_label, "Date & Time");
+    apply_text_style(datetime_label);
+    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    y_offset += 40;
+
+    // Get current time from RTC to populate fields
+    m5::rtc_datetime_t current_datetime;
+    bool rtc_valid = M5.Rtc.getDateTime(&current_datetime);
+
+    // If RTC read fails, use system time as fallback
+    struct tm timeinfo_storage;
+    struct tm *timeinfo;
+    if (rtc_valid) {
+        // Use RTC time
+        timeinfo_storage.tm_year = current_datetime.date.year - 1900;
+        timeinfo_storage.tm_mon = current_datetime.date.month - 1;
+        timeinfo_storage.tm_mday = current_datetime.date.date;
+        timeinfo_storage.tm_hour = current_datetime.time.hours;
+        timeinfo_storage.tm_min = current_datetime.time.minutes;
+        timeinfo_storage.tm_sec = current_datetime.time.seconds;
+        timeinfo = &timeinfo_storage;
+        ESP_LOGI(TAG, "Using RTC time for settings initialization");
+    } else {
+        // Fallback to system time
+        time_t now;
+        time(&now);
+        timeinfo = localtime(&now);
+        ESP_LOGW(TAG, "RTC read failed, using system time for settings initialization");
+    }
+
+    // Date section with labels
+    lv_obj_t *date_section_label = lv_label_create(cont);
+    lv_label_set_text(date_section_label, "Date:");
+    apply_text_style(date_section_label);
+    lv_obj_align(date_section_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    y_offset += 35;
+
+    // Create date labels row
+    lv_obj_t *date_labels_cont = lv_obj_create(cont);
+    lv_obj_set_size(date_labels_cont, lv_pct(100), 30);
+    lv_obj_align(date_labels_cont, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    lv_obj_set_style_bg_opa(date_labels_cont, LV_OPA_0, 0);
+    lv_obj_set_style_border_opa(date_labels_cont, LV_OPA_0, 0);
+    lv_obj_set_style_pad_all(date_labels_cont, 0, 0);
+    lv_obj_set_flex_flow(date_labels_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(date_labels_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Year label
+    lv_obj_t *year_label = lv_label_create(date_labels_cont);
+    lv_label_set_text(year_label, "Year");
+    lv_obj_set_style_text_font(year_label, THEME_FONT_SMALL, 0);
+    lv_obj_set_style_text_color(year_label, THEME_TEXT_MUTED, 0);
+    lv_obj_set_width(year_label, 120);
+
+    // Month label
+    lv_obj_t *month_label = lv_label_create(date_labels_cont);
+    lv_label_set_text(month_label, "Month");
+    lv_obj_set_style_text_font(month_label, THEME_FONT_SMALL, 0);
+    lv_obj_set_style_text_color(month_label, THEME_TEXT_MUTED, 0);
+    lv_obj_set_width(month_label, 100);
+
+    // Day label
+    lv_obj_t *day_label = lv_label_create(date_labels_cont);
+    lv_label_set_text(day_label, "Day");
+    lv_obj_set_style_text_font(day_label, THEME_FONT_SMALL, 0);
+    lv_obj_set_style_text_color(day_label, THEME_TEXT_MUTED, 0);
+    lv_obj_set_width(day_label, 100);
+
+    y_offset += 35;
+
+    // Create date spinboxes row
+    lv_obj_t *date_cont = lv_obj_create(cont);
+    lv_obj_set_size(date_cont, lv_pct(100), 80);
+    lv_obj_align(date_cont, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    lv_obj_set_style_bg_opa(date_cont, LV_OPA_0, 0);
+    lv_obj_set_style_border_opa(date_cont, LV_OPA_0, 0);
+    lv_obj_set_style_pad_all(date_cont, 0, 0);
+    lv_obj_set_flex_flow(date_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(date_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Year spinbox
+    year_spinbox = lv_spinbox_create(date_cont);
+    lv_spinbox_set_range(year_spinbox, 2020, 2100);
+    lv_spinbox_set_value(year_spinbox, timeinfo->tm_year + 1900);
+    lv_obj_set_size(year_spinbox, 180, 70);
+    lv_obj_set_style_text_font(year_spinbox, THEME_FONT_MEDIUM, 0);
+    // Ensure spinbox arrows are visible
+    lv_obj_set_style_bg_color(year_spinbox, lv_color_hex(0x333333), LV_PART_KNOB);
+    lv_obj_set_style_text_color(year_spinbox, lv_color_white(), LV_PART_KNOB);
+    lv_obj_add_event_cb(year_spinbox, settings_event_handler, LV_EVENT_VALUE_CHANGED, (void*)SETTINGS_YEAR_SPINBOX);
+
+    // Month spinbox
+    month_spinbox = lv_spinbox_create(date_cont);
+    lv_spinbox_set_range(month_spinbox, 1, 12);
+    lv_spinbox_set_value(month_spinbox, timeinfo->tm_mon + 1);
+    lv_obj_set_size(month_spinbox, 160, 70);
+    lv_obj_set_style_text_font(month_spinbox, THEME_FONT_MEDIUM, 0);
+    // Ensure spinbox arrows are visible
+    lv_obj_set_style_bg_color(month_spinbox, lv_color_hex(0x333333), LV_PART_KNOB);
+    lv_obj_set_style_text_color(month_spinbox, lv_color_white(), LV_PART_KNOB);
+    lv_obj_add_event_cb(month_spinbox, settings_event_handler, LV_EVENT_VALUE_CHANGED, (void*)SETTINGS_MONTH_SPINBOX);
+
+    // Day spinbox
+    day_spinbox = lv_spinbox_create(date_cont);
+    lv_spinbox_set_range(day_spinbox, 1, 31);
+    lv_spinbox_set_value(day_spinbox, timeinfo->tm_mday);
+    lv_obj_set_size(day_spinbox, 160, 70);
+    lv_obj_set_style_text_font(day_spinbox, THEME_FONT_MEDIUM, 0);
+    // Ensure spinbox arrows are visible
+    lv_obj_set_style_bg_color(day_spinbox, lv_color_hex(0x333333), LV_PART_KNOB);
+    lv_obj_set_style_text_color(day_spinbox, lv_color_white(), LV_PART_KNOB);
+    lv_obj_add_event_cb(day_spinbox, settings_event_handler, LV_EVENT_VALUE_CHANGED, (void*)SETTINGS_DAY_SPINBOX);
+
+    y_offset += 90;
+
+    // Time section with labels
+    lv_obj_t *time_section_label = lv_label_create(cont);
+    lv_label_set_text(time_section_label, "Time:");
+    apply_text_style(time_section_label);
+    lv_obj_align(time_section_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    y_offset += 35;
+
+    // Create time labels row
+    lv_obj_t *time_labels_cont = lv_obj_create(cont);
+    lv_obj_set_size(time_labels_cont, lv_pct(100), 30);
+    lv_obj_align(time_labels_cont, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    lv_obj_set_style_bg_opa(time_labels_cont, LV_OPA_0, 0);
+    lv_obj_set_style_border_opa(time_labels_cont, LV_OPA_0, 0);
+    lv_obj_set_style_pad_all(time_labels_cont, 0, 0);
+    lv_obj_set_flex_flow(time_labels_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(time_labels_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Hour label
+    lv_obj_t *hour_label = lv_label_create(time_labels_cont);
+    lv_label_set_text(hour_label, "Hour");
+    lv_obj_set_style_text_font(hour_label, THEME_FONT_SMALL, 0);
+    lv_obj_set_style_text_color(hour_label, THEME_TEXT_MUTED, 0);
+    lv_obj_set_width(hour_label, 100);
+
+    // Minute label
+    lv_obj_t *minute_label = lv_label_create(time_labels_cont);
+    lv_label_set_text(minute_label, "Minute");
+    lv_obj_set_style_text_font(minute_label, THEME_FONT_SMALL, 0);
+    lv_obj_set_style_text_color(minute_label, THEME_TEXT_MUTED, 0);
+    lv_obj_set_width(minute_label, 100);
+
+    y_offset += 35;
+
+    // Create time spinboxes and button row
+    lv_obj_t *time_cont = lv_obj_create(cont);
+    lv_obj_set_size(time_cont, lv_pct(100), 80);
+    lv_obj_align(time_cont, LV_ALIGN_TOP_LEFT, 0, y_offset);
+    lv_obj_set_style_bg_opa(time_cont, LV_OPA_0, 0);
+    lv_obj_set_style_border_opa(time_cont, LV_OPA_0, 0);
+    lv_obj_set_style_pad_all(time_cont, 0, 0);
+    lv_obj_set_flex_flow(time_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(time_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Hour spinbox
+    hour_spinbox = lv_spinbox_create(time_cont);
+    lv_spinbox_set_range(hour_spinbox, 0, 23);
+    lv_spinbox_set_value(hour_spinbox, timeinfo->tm_hour);
+    lv_obj_set_size(hour_spinbox, 160, 70);
+    lv_obj_set_style_text_font(hour_spinbox, THEME_FONT_MEDIUM, 0);
+    // Ensure spinbox arrows are visible
+    lv_obj_set_style_bg_color(hour_spinbox, lv_color_hex(0x333333), LV_PART_KNOB);
+    lv_obj_set_style_text_color(hour_spinbox, lv_color_white(), LV_PART_KNOB);
+    lv_obj_add_event_cb(hour_spinbox, settings_event_handler, LV_EVENT_VALUE_CHANGED, (void*)SETTINGS_HOUR_SPINBOX);
+
+    // Minute spinbox
+    minute_spinbox = lv_spinbox_create(time_cont);
+    lv_spinbox_set_range(minute_spinbox, 0, 59);
+    lv_spinbox_set_value(minute_spinbox, timeinfo->tm_min);
+    lv_obj_set_size(minute_spinbox, 160, 70);
+    lv_obj_set_style_text_font(minute_spinbox, THEME_FONT_MEDIUM, 0);
+    // Ensure spinbox arrows are visible
+    lv_obj_set_style_bg_color(minute_spinbox, lv_color_hex(0x333333), LV_PART_KNOB);
+    lv_obj_set_style_text_color(minute_spinbox, lv_color_white(), LV_PART_KNOB);
+    lv_obj_add_event_cb(minute_spinbox, settings_event_handler, LV_EVENT_VALUE_CHANGED, (void*)SETTINGS_MINUTE_SPINBOX);
+
+    // Set time button
+    lv_obj_t *set_time_btn = lv_btn_create(time_cont);
+    lv_obj_set_size(set_time_btn, 120, 70);
+    apply_button_style(set_time_btn);
+    lv_obj_add_event_cb(set_time_btn, settings_event_handler, LV_EVENT_CLICKED, (void*)SETTINGS_SET_TIME);
+
+    lv_obj_t *set_time_label = lv_label_create(set_time_btn);
+    lv_label_set_text(set_time_label, "Set Time");
+    lv_obj_set_style_text_color(set_time_label, lv_color_white(), 0);
+    lv_obj_set_style_text_font(set_time_label, THEME_FONT_NORMAL, 0);
+    lv_obj_center(set_time_label);
+
+    y_offset += 90;
 }
 
 static void create_file_browser_tab(lv_obj_t *parent) {
@@ -217,7 +484,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // View mode setting
     lv_obj_t *view_label = lv_label_create(cont);
     lv_label_set_text(view_label, "View Mode");
-    lv_obj_set_style_text_font(view_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(view_label);
     lv_obj_align(view_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     view_mode_dropdown = lv_dropdown_create(cont);
@@ -231,7 +498,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // Sort by setting
     lv_obj_t *sort_label = lv_label_create(cont);
     lv_label_set_text(sort_label, "Sort By");
-    lv_obj_set_style_text_font(sort_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(sort_label);
     lv_obj_align(sort_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     sort_by_dropdown = lv_dropdown_create(cont);
@@ -245,7 +512,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // Sort order setting
     lv_obj_t *order_label = lv_label_create(cont);
     lv_label_set_text(order_label, "Ascending Sort");
-    lv_obj_set_style_text_font(order_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(order_label);
     lv_obj_align(order_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     sort_order_switch = lv_switch_create(cont);
@@ -257,7 +524,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // Show hidden files setting
     lv_obj_t *hidden_label = lv_label_create(cont);
     lv_label_set_text(hidden_label, "Show Hidden Files");
-    lv_obj_set_style_text_font(hidden_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(hidden_label);
     lv_obj_align(hidden_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     show_hidden_switch = lv_switch_create(cont);
@@ -269,7 +536,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // Show extensions setting
     lv_obj_t *ext_label = lv_label_create(cont);
     lv_label_set_text(ext_label, "Show File Extensions");
-    lv_obj_set_style_text_font(ext_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(ext_label);
     lv_obj_align(ext_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     show_extensions_switch = lv_switch_create(cont);
@@ -281,7 +548,7 @@ static void create_file_browser_tab(lv_obj_t *parent) {
     // Items per page setting
     lv_obj_t *items_label = lv_label_create(cont);
     lv_label_set_text(items_label, "Items Per Page");
-    lv_obj_set_style_text_font(items_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(items_label);
     lv_obj_align(items_label, LV_ALIGN_TOP_LEFT, 0, y_offset);
     
     items_per_page_slider = lv_slider_create(cont);
@@ -302,7 +569,7 @@ static void create_theme_tab(lv_obj_t *parent) {
     // Theme selection
     lv_obj_t *theme_label = lv_label_create(cont);
     lv_label_set_text(theme_label, "Color Theme");
-    lv_obj_set_style_text_font(theme_label, THEME_FONT_MEDIUM, 0);
+    apply_text_style(theme_label);
     lv_obj_align(theme_label, LV_ALIGN_TOP_LEFT, 0, 20);
     
     theme_dropdown = lv_dropdown_create(cont);
@@ -315,7 +582,7 @@ static void create_theme_tab(lv_obj_t *parent) {
     // Note: Color picker would be implemented here for custom themes
     lv_obj_t *note_label = lv_label_create(cont);
     lv_label_set_text(note_label, "Custom color options will be available in a future update.");
-    lv_obj_set_style_text_font(note_label, THEME_FONT_SMALL, 0);
+    apply_text_muted_style(note_label);
     lv_obj_align(note_label, LV_ALIGN_TOP_LEFT, 0, 120);
 }
 
@@ -375,7 +642,7 @@ static void settings_event_handler(lv_event_t *e) {
         bool save_needed = true;
         
         switch (control_id) {
-            case SETTINGS_BRIGHTNESS:
+            case SETTINGS_BRIGHTNESS: {
                 config->system.brightness = (uint8_t)lv_slider_get_value(brightness_slider);
                 ESP_LOGI(TAG, "Brightness set to %d", config->system.brightness);
                 // Apply brightness to hardware
@@ -384,6 +651,7 @@ static void settings_event_handler(lv_event_t *e) {
                     ESP_LOGW(TAG, "Failed to set hardware brightness: %s", esp_err_to_name(ret));
                 }
                 break;
+            }
                 
             case SETTINGS_TIMEOUT: {
                 uint16_t sel = lv_dropdown_get_selected(timeout_dropdown);
@@ -398,6 +666,9 @@ static void settings_event_handler(lv_event_t *e) {
             case SETTINGS_ANIMATIONS:
                 config->system.enable_animations = lv_obj_has_state(animations_switch, LV_STATE_CHECKED);
                 ESP_LOGI(TAG, "Animations %s", config->system.enable_animations ? "enabled" : "disabled");
+
+                // Update global animation manager immediately
+                gui_animation_manager_set_enabled(config->system.enable_animations);
                 break;
                 
             case SETTINGS_AUTO_MOUNT:
@@ -448,7 +719,56 @@ static void settings_event_handler(lv_event_t *e) {
                 // Theme switching logic would go here
                 ESP_LOGI(TAG, "Theme changed to %" PRIu32, lv_dropdown_get_selected(theme_dropdown));
                 break;
-                
+
+            case SETTINGS_SET_TIME: {
+                ESP_LOGI(TAG, "Set time button clicked");
+
+                // Get values from spinboxes and create RTC datetime structure
+                m5::rtc_datetime_t new_datetime;
+                new_datetime.date.year = lv_spinbox_get_value(year_spinbox);
+                new_datetime.date.month = lv_spinbox_get_value(month_spinbox);
+                new_datetime.date.date = lv_spinbox_get_value(day_spinbox);
+                new_datetime.time.hours = lv_spinbox_get_value(hour_spinbox);
+                new_datetime.time.minutes = lv_spinbox_get_value(minute_spinbox);
+                new_datetime.time.seconds = 0; // Set seconds to 0
+
+                // Calculate weekday (0=Sunday, 6=Saturday)
+                struct tm temp_time = {};
+                temp_time.tm_year = new_datetime.date.year - 1900;
+                temp_time.tm_mon = new_datetime.date.month - 1;
+                temp_time.tm_mday = new_datetime.date.date;
+                temp_time.tm_hour = new_datetime.time.hours;
+                temp_time.tm_min = new_datetime.time.minutes;
+                temp_time.tm_sec = new_datetime.time.seconds;
+                temp_time.tm_isdst = -1;
+                time_t timestamp = mktime(&temp_time);
+                new_datetime.date.weekDay = temp_time.tm_wday;
+
+                // Set RTC time using M5Unified
+                M5.Rtc.setDateTime(new_datetime);
+                ESP_LOGI(TAG, "RTC time set successfully");
+
+                // Also update system time to match RTC
+                if (timestamp != -1) {
+                    struct timeval tv = { .tv_sec = timestamp, .tv_usec = 0 };
+                    settimeofday(&tv, NULL);
+                    ESP_LOGI(TAG, "System time synchronized with RTC");
+                }
+                save_needed = false; // Don't save config for time changes
+                break;
+            }
+
+            case SETTINGS_YEAR_SPINBOX:
+            case SETTINGS_MONTH_SPINBOX:
+            case SETTINGS_DAY_SPINBOX:
+            case SETTINGS_HOUR_SPINBOX:
+            case SETTINGS_MINUTE_SPINBOX:
+                // Spinbox value changed - no immediate action needed
+                // Values will be read when "Set" button is clicked
+                ESP_LOGD(TAG, "Date/time spinbox value changed");
+                save_needed = false; // Don't save config for spinbox changes
+                break;
+
             case SETTINGS_RESET_DEFAULTS:
                 ESP_LOGI(TAG, "Resetting configuration to defaults");
                 config_manager_reset_defaults(config);
@@ -497,7 +817,7 @@ static void apply_current_config_to_ui(void) {
     
     // Apply system settings
     if (brightness_slider) {
-        lv_slider_set_value(brightness_slider, config->system.brightness, LV_ANIM_OFF);
+        lv_slider_set_value(brightness_slider, config->system.brightness, gui_animation_manager_get_anim_flag());
     }
     
     if (timeout_dropdown) {
@@ -561,7 +881,7 @@ static void apply_current_config_to_ui(void) {
     }
     
     if (items_per_page_slider) {
-        lv_slider_set_value(items_per_page_slider, config->file_browser.items_per_page, LV_ANIM_OFF);
+        lv_slider_set_value(items_per_page_slider, config->file_browser.items_per_page, gui_animation_manager_get_anim_flag());
     }
     
     ESP_LOGI(TAG, "Applied current configuration to UI");

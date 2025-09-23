@@ -1,4 +1,48 @@
 dependencies:
+  M5GFX:
+    component_hash: 7baf52d61b783f564ad44686f71dcf00ce67dcc7979117d5bfbb02fdab8bd914
+    dependencies:
+    - name: idf
+      version: '>=5.3'
+    source:
+      git: https://github.com/Paqurin/M5GFX-Tab5.git
+      path: .
+      type: git
+    targets:
+    - esp32
+    - esp32s3
+    - esp32c3
+    - esp32p4
+    version: caea4f592412cb213a04dc9be3614e324ea9807a
+  Paqurin/M5GFX-Tab5:
+    component_hash: 7baf52d61b783f564ad44686f71dcf00ce67dcc7979117d5bfbb02fdab8bd914
+    dependencies:
+    - name: idf
+      version: '>=5.3'
+    source:
+      git: https://github.com/Paqurin/M5GFX-Tab5.git
+      path: .
+      type: git
+    targets:
+    - esp32
+    - esp32s3
+    - esp32c3
+    - esp32p4
+    version: caea4f592412cb213a04dc9be3614e324ea9807a
+  Paqurin/M5unified-ESP32P4:
+    component_hash: 487756e02a8db7cde3728a7b1fe54966fe86dad7879d24c874bd356237077de7
+    dependencies:
+    - name: idf
+      version: '>=5.3'
+    - git: https://github.com/Paqurin/M5GFX-Tab5.git
+      name: M5GFX
+    source:
+      git: https://github.com/Paqurin/M5unified-ESP32P4.git
+      path: .
+      type: git
+    targets:
+    - esp32p4
+    version: aa0b4b97e1b5d04526575f5d905dbd50473ae792
   espressif/cmake_utilities:
     component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
     dependencies:
@@ -10,7 +54,7 @@ dependencies:
       type: service
     version: 0.5.3
   espressif/esp_codec_dev:
-    component_hash: 18c22e1411224ba6103c4aca1b01bc740af33926756e9e106370a477d52bcba1
+    component_hash: 3a1df01ee46d64c55155341bb6f4834db33db7dbd9b637e476e1eab64d01295a
     dependencies:
     - name: idf
       require: private
@@ -18,9 +62,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.3.4
+    version: 1.4.0
   espressif/esp_lcd_ili9881c:
-    component_hash: f4f374226b62baf13f735864e8fae58e17c537df34d598e059f6caad4761ef65
+    component_hash: eb9ba0484d1d14171b69e5d192716fb1cdd6ef068aa4014dc3202486e124498e
     dependencies:
     - name: idf
       require: private
@@ -30,9 +74,9 @@ dependencies:
       type: service
     targets:
     - esp32p4
-    version: 1.0.1
+    version: 1.0.2
   espressif/esp_lcd_st7703:
-    component_hash: fdc6a37259eeb69bf02c2dcb44eeb689b1b4d3a8124d4c7eb15d9817067989af
+    component_hash: b812126bfa7e144d16820fe0cce33e340f87c14386f31568dc23dcea8976a8b7
     dependencies:
     - name: espressif/cmake_utilities
       registry_url: https://components.espressif.com
@@ -46,7 +90,7 @@ dependencies:
       type: service
     targets:
     - esp32p4
-    version: 1.0.3
+    version: 1.0.4
   espressif/esp_lcd_touch:
     component_hash: 779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4
     dependencies:
@@ -72,7 +116,7 @@ dependencies:
       type: service
     version: 1.1.3
   espressif/esp_lvgl_port:
-    component_hash: e720c95cf0667554a204591bb5fade4655fb2990465557041200fa44b5bc7556
+    component_hash: a3db8fedba9f474dac24f1e0cd5bc5e560224e51bb5fa30bb2aa5470d49048db
     dependencies:
     - name: idf
       require: private
@@ -84,7 +128,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 2.6.0
+    version: 2.6.1
   espressif/usb_host_hid:
     component_hash: eabf03fe3cb1bdb5325d2725f420c6324c3e150033d893ce3737222929455a55
     dependencies:
@@ -111,6 +155,8 @@ dependencies:
       type: service
     version: 9.3.0
 direct_dependencies:
+- Paqurin/M5GFX-Tab5
+- Paqurin/M5unified-ESP32P4
 - espressif/esp_codec_dev
 - espressif/esp_lcd_ili9881c
 - espressif/esp_lcd_st7703
@@ -118,6 +164,6 @@ direct_dependencies:
 - espressif/esp_lvgl_port
 - espressif/usb_host_hid
 - idf
-manifest_hash: f71a1413852470ac7c7eeea4c1751b4e0b482449dfc6dd6a729ac418b17e2ce0
+manifest_hash: 2a3bd75a622f5d9c01a5ee1f6c9f080e43f21c6f13c97d8060792a6dcd27d096
 target: esp32p4
 version: 2.0.0

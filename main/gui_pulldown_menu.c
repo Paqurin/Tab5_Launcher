@@ -1,6 +1,7 @@
 #include "gui_pulldown_menu.h"
 #include "gui_styles.h"
 #include "gui_screens.h"
+#include "gui_animation_manager.h"
 #include "sd_manager.h"
 #include "esp_log.h"
 #include "bsp/esp-bsp.h"
@@ -148,14 +149,19 @@ void gui_pulldown_menu_show(gui_pulldown_menu_t *menu) {
     // Show container
     lv_obj_remove_flag(menu->container, LV_OBJ_FLAG_HIDDEN);
 
-    // Animate slide down
+    // Animate slide down - TEMPORARILY DISABLED for performance testing
+    /*
     lv_anim_init(&menu->slide_anim);
     lv_anim_set_var(&menu->slide_anim, menu->container);
     lv_anim_set_values(&menu->slide_anim, -270, 0);
-    lv_anim_set_time(&menu->slide_anim, 300);
+    lv_anim_set_time(&menu->slide_anim, gui_animation_manager_get_time(300));
     lv_anim_set_exec_cb(&menu->slide_anim, slide_anim_cb);
     lv_anim_set_path_cb(&menu->slide_anim, lv_anim_path_ease_out);
     lv_anim_start(&menu->slide_anim);
+    */
+
+    // Instant show without animation for now
+    lv_obj_set_y(menu->container, 0);
 
     menu->is_open = true;
 }
@@ -174,16 +180,23 @@ void gui_pulldown_menu_hide(gui_pulldown_menu_t *menu) {
     
     ESP_LOGI(TAG, "Hiding pull-down menu");
     
-    // Animate slide up
+    // Animate slide up - TEMPORARILY DISABLED for performance testing
+    /*
     lv_anim_init(&menu->slide_anim);
     lv_anim_set_var(&menu->slide_anim, menu->container);
     lv_anim_set_values(&menu->slide_anim, 0, -270);
-    lv_anim_set_time(&menu->slide_anim, 300);
+    lv_anim_set_time(&menu->slide_anim, gui_animation_manager_get_time(300));
     lv_anim_set_exec_cb(&menu->slide_anim, slide_anim_cb);
     lv_anim_set_path_cb(&menu->slide_anim, lv_anim_path_ease_in);
     lv_anim_set_completed_cb(&menu->slide_anim, hide_anim_complete_cb);
     lv_anim_set_user_data(&menu->slide_anim, menu);
     lv_anim_start(&menu->slide_anim);
+    */
+
+    // Instant hide without animation for now
+    lv_obj_set_y(menu->container, -270);
+    lv_obj_add_flag(menu->container, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(menu->backdrop, LV_OBJ_FLAG_HIDDEN);
     
     menu->is_open = false;
 }

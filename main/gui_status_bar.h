@@ -4,6 +4,7 @@
 #include "lvgl.h"
 #include <stdbool.h>
 #include "esp_err.h"
+#include "gui_pulldown_menu.h"
 
 /**
  * @brief Status bar component for displaying power, network, and system status
@@ -20,6 +21,7 @@ typedef struct {
     lv_obj_t *ip_label;
     lv_obj_t *title_label;
     lv_obj_t *time_label;
+    gui_pulldown_menu_t *pulldown_menu;
 } gui_status_bar_t;
 
 /**

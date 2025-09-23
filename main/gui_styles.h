@@ -7,7 +7,7 @@
 #define THEME_BG_COLOR          lv_color_hex(0x000000)    // Pure black background
 #define THEME_PRIMARY_COLOR     lv_color_hex(0x00ff00)    // Bright green
 #define THEME_SECONDARY_COLOR   lv_color_hex(0x008000)    // Dark green
-#define THEME_TEXT_COLOR        lv_color_hex(0x00ff00)    // Green text
+#define THEME_TEXT_COLOR        lv_color_hex(0xFFFFFF)    // White text
 #define THEME_TEXT_MUTED        lv_color_hex(0x808080)    // Gray text
 #define THEME_BORDER_COLOR      lv_color_hex(0x00ff00)    // Green borders
 #define THEME_ERROR_COLOR       lv_color_hex(0xff0000)    // Red for errors
@@ -19,6 +19,10 @@
 #define THEME_FONT_MEDIUM       &lv_font_montserrat_28
 #define THEME_FONT_NORMAL       &lv_font_montserrat_24
 #define THEME_FONT_SMALL        &lv_font_montserrat_20
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Style objects (extern declarations)
 extern lv_style_t style_screen;
@@ -65,5 +69,9 @@ void apply_text_style(lv_obj_t *label);
  * @brief Apply muted text style to a label
  */
 void apply_text_muted_style(lv_obj_t *label);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // GUI_STYLES_H
