@@ -3,6 +3,7 @@
 #include "gui_styles.h"
 #include "gui_pulldown_menu.h"
 #include "gui_screen_tools.h"
+#include "gui_screen_wifi_controls.h"
 #include "sd_manager.h"
 #include "firmware_loader.h"
 #include "esp_log.h"
@@ -21,6 +22,19 @@ void create_main_screen(void) {
     lv_obj_add_style(main_screen, &style_screen, LV_PART_MAIN | LV_STATE_DEFAULT);
     
     // Status bar is now global - no individual creation needed
+
+    // WiFi button in top left corner
+    lv_obj_t *wifi_btn = lv_button_create(main_screen);
+    lv_obj_set_size(wifi_btn, 80, 40);  // 80px x 40px rectangular
+    lv_obj_align(wifi_btn, LV_ALIGN_TOP_LEFT, 5, 45);  // Top left, below status bar
+    apply_button_style(wifi_btn);
+    lv_obj_set_style_bg_color(wifi_btn, lv_color_hex(0x3498db), 0);  // Blue color for WiFi
+    lv_obj_add_event_cb(wifi_btn, main_menu_event_handler, LV_EVENT_CLICKED, (void*)(uintptr_t)10);
+
+    lv_obj_t *wifi_label = lv_label_create(wifi_btn);
+    lv_label_set_text(wifi_label, LV_SYMBOL_WIFI " WiFi");
+    lv_obj_set_style_text_font(wifi_label, &lv_font_montserrat_12, 0);  // Smaller font to fit
+    lv_obj_center(wifi_label);
 
     // Switches button in top right corner
     lv_obj_t *switches_btn = lv_button_create(main_screen);

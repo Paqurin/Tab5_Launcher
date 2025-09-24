@@ -8,6 +8,7 @@
 #include "gui_screen_text_editor.h"
 #include "gui_screen_python_launcher.h"
 #include "gui_screen_switches.h"
+#include "gui_screen_wifi_controls.h"
 #include "gui_styles.h"
 #include "firmware_loader.h"
 #include "sd_manager.h"
@@ -205,6 +206,10 @@ void main_menu_event_handler(lv_event_t *e) {
             case 9: // Switches
                 ESP_LOGI(TAG, "Switches selected");
                 show_switches_screen();
+                break;
+            case 10: // WiFi Controls
+                ESP_LOGI(TAG, "WiFi Controls selected");
+                show_wifi_controls_screen();
                 break;
         }
     }

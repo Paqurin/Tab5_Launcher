@@ -63,6 +63,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.4.0
+  espressif/esp_hosted:
+    component_hash: 3bb68bc1b250c6329140ab25009f7a262346622a9554fd2ffe9e8bfb3cd08b41
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.5.1
   espressif/esp_lcd_ili9881c:
     component_hash: eb9ba0484d1d14171b69e5d192716fb1cdd6ef068aa4014dc3202486e124498e
     dependencies:
@@ -158,12 +168,13 @@ direct_dependencies:
 - Paqurin/M5GFX-Tab5
 - Paqurin/M5unified-ESP32P4
 - espressif/esp_codec_dev
+- espressif/esp_hosted
 - espressif/esp_lcd_ili9881c
 - espressif/esp_lcd_st7703
 - espressif/esp_lcd_touch_gt911
 - espressif/esp_lvgl_port
 - espressif/usb_host_hid
 - idf
-manifest_hash: 2a3bd75a622f5d9c01a5ee1f6c9f080e43f21c6f13c97d8060792a6dcd27d096
+manifest_hash: 4236d100ea2d70a9fe2c88b5f2ff395e2b6dcc265a8d9951e6cf34728c6fe45c
 target: esp32p4
 version: 2.0.0

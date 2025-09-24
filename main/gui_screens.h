@@ -10,6 +10,7 @@ extern lv_obj_t *firmware_loader_screen;
 extern lv_obj_t *progress_screen;
 extern lv_obj_t *splash_screen;
 extern lv_obj_t *settings_screen;
+extern lv_obj_t *wifi_controls_screen;
 
 // UI element objects
 extern lv_obj_t *file_list;
