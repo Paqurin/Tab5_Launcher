@@ -76,9 +76,10 @@ This project includes specialized agents in the `agents/` directory. **ALWAYS us
 This is the **Tab5_Launcher** project - a firmware launcher and file manager for the M5Stack Tab5 device. It provides OTA firmware loading capabilities and serves as a foundation for launching other applications on the Tab5 platform.
 
 ### Core Technologies
-- **ESP-IDF 5.4.1**: Primary embedded development framework (Note: Using 5.4.1 for stability, not 6.0)
+- **ESP-IDF 5.5.1**: Primary embedded development framework (latest stable)
 - **LVGL 9.3.0**: Light and Versatile Graphics Library for embedded GUI development
-- **M5Stack Tab5 BSP**: Board support package for M5Stack Tab5 hardware
+- **M5Unified ESP32-P4**: Custom M5Unified port for Tab5 (replaces original BSP)
+- **M5GFX Tab5**: Custom M5GFX graphics library for Tab5
 - **ESP32-P4**: High-performance MCU with advanced graphics capabilities
 
 ### Key Features
@@ -96,8 +97,8 @@ This is the **Tab5_Launcher** project - a firmware launcher and file manager for
 
 ### Core ESP-IDF Commands
 ```bash
-# Set up ESP-IDF 5.4.1 environment
-. ~/esp/esp-idf-5.4.1/export.sh
+# Set up ESP-IDF environment (5.5.1)
+. ~/esp/v5.5.1/esp-idf/export.sh
 
 # Build the project (with distributed compilation)
 CC=distcc CXX=distcc++ idf.py build
@@ -129,7 +130,7 @@ idf.py menuconfig
    - Follow M5Stack Tab5 BSP patterns
    - Use LVGL for GUI components
    - Implement launcher functionality with OTA support
-4. **Build & Test**: Run `. ~/esp/esp-idf-5.4.1/export.sh && CC=distcc CXX=distcc++ idf.py build flash` cycle
+4. **Build & Test**: Run `. ~/esp/v5.5.1/esp-idf/export.sh && CC=distcc CXX=distcc++ idf.py build flash` cycle
 5. **Task Completion**: Update Archon task status
 
 ## Project Structure
@@ -158,8 +159,8 @@ Tab5_Launcher/
 ## Code Architecture
 
 ### Entry Point
-- **main/launcher_main.c**: Contains `app_main()` function with launcher initialization
-- Initialize M5Stack Tab5 BSP, setup LVGL display, configure touch input
+- **main/launcher_main.cpp**: Contains `app_main()` function with launcher initialization
+- Initialize M5Unified, setup LVGL display via M5GFX backend, configure touch input
 
 ### Core Components
 - **GUI Manager**: LVGL integration and display management
@@ -176,10 +177,10 @@ Tab5_Launcher/
 ## Development Environment
 
 ### Prerequisites
-- ESP-IDF 5.4.1 installed at `~/esp/esp-idf-5.4.1/`
+- ESP-IDF 5.5.1 (latest stable) installed at `~/esp/v5.5.1/esp-idf/`
 - Python 3.13+ (detected in environment)
 - Serial drivers for M5Stack Tab5 device
-- Git access to M5Stack and bmorcelli repositories
+- Git access to M5Stack, bmorcelli, and Paqurin (M5Unified/M5GFX) repositories
 
 ### Hardware Target: M5Stack Tab5
 - **Display**: High-resolution color LCD with DSI interface
@@ -243,6 +244,83 @@ Tab5_Launcher/
 - Touch gesture improvements
 - Accessibility features
 - Documentation and help system
+
+# ESP-IDF Migration Notes (5.4.1 → 5.5.1)
+
+## Migration Completed
+
+**Date:** 2025-10-11
+**From:** ESP-IDF 5.4.1
+**To:** ESP-IDF 5.5.1 (latest stable)
+
+### Changes Made
+
+1. **Component Manifests**
+   - Updated [main/idf_component.yml](main/idf_component.yml): `idf: version: '>=5.5'`
+   - All component dependencies already compatible (`>=5.3` supports 5.5.1)
+
+2. **Build Configuration**
+   - Updated [CMakeLists.txt](CMakeLists.txt): `cmake_minimum_required(VERSION 3.22)`
+   - Required by ESP-IDF 5.5+ (previously 3.16)
+
+3. **Documentation**
+   - Updated all ESP-IDF path references: `~/esp/esp-idf-5.4.1/` → `~/esp/esp-idf/`
+   - Updated core technology stack description
+   - Updated development commands and workflow
+
+### Compatibility Notes
+
+**✅ Already Compatible:**
+- M5Unified ESP32-P4: Requires `>=5.3` (compatible with 5.5.1)
+- M5GFX Tab5: Requires `>=5.3` (compatible with 5.5.1)
+- esp_lvgl_port: Version 2.6.0+ supports LVGL 9.x
+- esp_hosted: Version 2.5.1 requires `>=5.3`
+- All ESP LCD drivers: Require `>=5.3`
+
+**⚠️ Watch For:**
+- I2C driver API changes (M5Unified I2C wrapper should handle this)
+- DMA API updates (M5GFX flush callback may need testing)
+- FreeRTOS task management (unlikely to affect current code)
+- PSRAM/cache configuration for ESP32-P4
+
+### Post-Migration Steps
+
+1. **Clean Build Required:**
+   ```bash
+   . ~/esp/v5.5.1/esp-idf/export.sh
+   idf.py fullclean
+   rm -rf build/ managed_components/ dependencies.lock
+   ```
+
+2. **Rebuild Dependencies:**
+   ```bash
+   idf.py reconfigure
+   CC=distcc CXX=distcc++ idf.py build
+   ```
+
+3. **Hardware Testing Checklist:**
+   - [ ] M5Unified initialization (RTC, I2C, power)
+   - [ ] Display rendering via M5GFX
+   - [ ] Touch input responsiveness
+   - [ ] SD card mount/unmount operations
+   - [ ] OTA firmware loading and execution
+   - [ ] WiFi functionality (ESP-Hosted C6 coprocessor)
+   - [ ] Power monitoring (INA226)
+   - [ ] Hardware switches (charge, USB, antenna)
+
+### Known Issues
+
+**None identified during migration analysis.**
+
+All code already uses M5Unified/M5GFX abstractions that should handle ESP-IDF API differences internally.
+
+### Rollback Procedure
+
+If issues arise, revert these files:
+1. [CLAUDE.md](CLAUDE.md) - Documentation
+2. [main/idf_component.yml](main/idf_component.yml) - IDF version constraint
+3. [CMakeLists.txt](CMakeLists.txt) - CMake version
+4. Switch back to ESP-IDF 5.4.1: `. ~/esp/esp-idf-5.4.1/export.sh`
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
