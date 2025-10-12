@@ -23,6 +23,9 @@ dependencies:
   # M5GFX ESP32-P4 port for Tab5 graphics
   Paqurin/M5GFX-Tab5:
     git: https://github.com/Paqurin/M5GFX-Tab5.git
+  # WiFi Remote - provides standard WiFi API abstraction for ESP-Hosted
+  espressif/esp_wifi_remote:
+    version: "*"
   # ESP-Hosted for WiFi functionality via ESP32-C6 coprocessor
   espressif/esp_hosted:
     version: "*"

@@ -4,5 +4,6 @@
     "files.associations": {
         "esp-bsp.h": "c"
     },
-    "idf.pythonInstallPath": "/usr/bin/python3"
+    "idf.pythonInstallPath": "/usr/bin/python3",
+    "idf.port": "/dev/ttyACM0"
 }

@@ -34,3 +34,10 @@ idf_component_register(SRCS "gui_pulldown_menu.c" "gui_screen_settings.cpp" "gui
                     INCLUDE_DIRS "."
                     REQUIRES micropython_wrapper m5stack-tab5 esp_app_format M5unified-ESP32P4 M5GFX-Tab5 esp_hosted
                     PRIV_REQUIRES spiffs json app_update efuse esp_event nvs_flash)
+
+# NOTE: ESP-IDF 5.5.1 esp_lcd_io_i2c.h C++ overload bug has been fixed by directly patching:
+# ~/esp/v5.5.1/esp-idf/components/esp_lcd/include/esp_lcd_io_i2c.h
+# Backup saved as: ~/esp/v5.5.1/esp-idf/components/esp_lcd/include/esp_lcd_io_i2c.h.backup
+
+# NOTE: RTC (RX8130CE) I2C communication fixed by using M5Unified's shared I2C bus
+# See: managed_components/Paqurin__M5unified-ESP32P4/src/utility/rtc_esp32p4.cpp
