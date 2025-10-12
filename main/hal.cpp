@@ -46,9 +46,10 @@ void hal_init(void)
         return;
     }
 
-    // Use PARTIAL mode with double 1/10 screen buffers for best balance
-    // PARTIAL mode: Works with smaller buffers, double buffering prevents tearing
-    size_t buffer_pixels = (width * height) / 10;  // 1/10 screen = ~92KB buffer
+    // CRITICAL FIX: Use PARTIAL mode with double 1/10 screen buffers
+    // PARTIAL mode is the correct mode for partial rendering with smaller buffers
+    // DIRECT mode requires full screen buffers which would use ~1.8MB each
+    size_t buffer_pixels = (width * height) / 10;  // 1/10 screen = ~92KB buffer (1280x72 pixels)
     size_t buffer_bytes = buffer_pixels * sizeof(lv_color_t);
 
     // Ensure buffer size is aligned to ESP32-P4 cache line size (64 bytes) with padding
@@ -82,8 +83,8 @@ void hal_init(void)
     ESP_LOGI("HAL", "LVGL PARTIAL mode buffers allocated: %d bytes each (%d pixels, %dx%d lines)",
              (int)buffer_bytes, (int)buffer_pixels, (int)width, (int)(buffer_pixels / width));
 
-    // Use PARTIAL mode with double buffering for best balance
-    // PARTIAL mode: Works with smaller buffers, chunks rendering, double buffering prevents tearing
+    // CRITICAL FIX: Use PARTIAL mode instead of DIRECT
+    // PARTIAL mode works correctly with smaller buffers and renders in chunks
     lv_display_set_buffers(lvDisp, buf1, buf2, cache_aligned_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     // Store buffer and display information in display user data for overflow checking
@@ -138,14 +139,15 @@ void hal_init(void)
         // Calculate buffer size for cache operations with alignment padding
         size_t pixel_data_size = total_pixels * sizeof(lv_color_t);
 
-        // Additional safety check: verify pixel data doesn't exceed expected buffer boundaries
-        // Temporarily disabled to allow rendering while we test buffer sizing
+        // Buffer overflow check for PARTIAL mode
         size_t expected_buffer_size = (display_info->buffer_pixels * sizeof(lv_color_t));
         if (pixel_data_size > expected_buffer_size) {
-            ESP_LOGW("HAL", "Buffer overflow warning: data_size=%zu > buffer_size=%zu (allowing render)",
+            ESP_LOGE("HAL", "Buffer overflow: data_size=%zu > buffer_size=%zu - area too large for PARTIAL buffer",
                      pixel_data_size, expected_buffer_size);
-            // Continue rendering instead of blocking
+            lv_display_flush_ready(disp);
+            return;
         }
+
         size_t aligned_data_size = ((pixel_data_size + 127) & ~127);  // Round up to 128-byte boundary
 
         // Optimized cache coherency for ESP32-P4 with minimal operations
