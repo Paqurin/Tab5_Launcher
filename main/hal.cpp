@@ -46,33 +46,27 @@ void hal_init(void)
         return;
     }
 
-    // CRITICAL FIX: Use PARTIAL mode with double 1/10 screen buffers
-    // PARTIAL mode is the correct mode for partial rendering with smaller buffers
-    // DIRECT mode requires full screen buffers which would use ~1.8MB each
-    size_t buffer_pixels = (width * height) / 10;  // 1/10 screen = ~92KB buffer (1280x72 pixels)
-    size_t buffer_bytes = buffer_pixels * sizeof(lv_color_t);
+    // FULL SCREEN DOUBLE BUFFERING: Allocate full screen buffers for DIRECT mode
+    // This eliminates buffer overflow errors and provides smooth, artifact-free rendering
+    // ESP32-P4 has 32MB PSRAM at 200MHz - plenty fast enough for full-screen double buffering
+    size_t buffer_pixels = width * height;  // Full screen = 1280x720 = 921,600 pixels
+    size_t buffer_bytes = buffer_pixels * sizeof(lv_color_t);  // RGB565 = 2 bytes per pixel = 1,843,200 bytes (~1.8MB)
 
     // Ensure buffer size is aligned to ESP32-P4 cache line size (64 bytes) with padding
     size_t cache_aligned_bytes = ((buffer_bytes + 127) & ~127);  // 128-byte alignment for safety
 
-    ESP_LOGI("HAL", "Allocating double 1/10 screen buffers (%.1fKB each) for PARTIAL mode",
-             cache_aligned_bytes / 1024.0f);
+    ESP_LOGI("HAL", "Allocating full-screen double buffers (%.2fMB each) for DIRECT mode",
+             cache_aligned_bytes / (1024.0f * 1024.0f));
 
-    // Try internal RAM first for maximum speed (double buffering)
-    void* buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-    void* buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-
-    if (!buf1 || !buf2) {
-        // Internal RAM full - use SPIRAM (slower but plenty of space)
-        ESP_LOGI("HAL", "Internal RAM insufficient, using SPIRAM buffers");
-        if (buf1) free(buf1);
-        if (buf2) free(buf2);
-        buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-        buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-    }
+    // Use SPIRAM for full-screen buffers (3.6MB total for double buffering)
+    // SPIRAM at 200MHz is fast enough for smooth rendering
+    // This uses only ~11% of 32MB PSRAM, leaving plenty for application use
+    void* buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+    void* buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
 
     if (!buf1 || !buf2) {
-        ESP_LOGE("HAL", "Failed to allocate LVGL buffers");
+        ESP_LOGE("HAL", "Failed to allocate full-screen LVGL buffers (%.2fMB each required)",
+                 cache_aligned_bytes / (1024.0f * 1024.0f));
         if (buf1) free(buf1);
         if (buf2) free(buf2);
         lv_display_delete(lvDisp);
@@ -80,14 +74,30 @@ void hal_init(void)
         return;
     }
 
-    ESP_LOGI("HAL", "LVGL PARTIAL mode buffers allocated: %d bytes each (%d pixels, %dx%d lines)",
-             (int)buffer_bytes, (int)buffer_pixels, (int)width, (int)(buffer_pixels / width));
+    // Log memory usage
+    size_t total_psram = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+    size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t used_buffers = cache_aligned_bytes * 2;
 
-    // CRITICAL FIX: Use PARTIAL mode instead of DIRECT
-    // PARTIAL mode works correctly with smaller buffers and renders in chunks
-    lv_display_set_buffers(lvDisp, buf1, buf2, cache_aligned_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    ESP_LOGI("HAL", "LVGL DIRECT mode buffers allocated successfully:");
+    ESP_LOGI("HAL", "  - Buffer size: %.2fMB each (%.2fMB total for double buffering)",
+             cache_aligned_bytes / (1024.0f * 1024.0f), used_buffers / (1024.0f * 1024.0f));
+    ESP_LOGI("HAL", "  - Buffer dimensions: %dx%d pixels (%d total pixels)",
+             (int)width, (int)height, (int)buffer_pixels);
+    ESP_LOGI("HAL", "  - PSRAM usage: %.2fMB / %.2fMB (%.1f%% used, %.2fMB free)",
+             (total_psram - free_psram) / (1024.0f * 1024.0f),
+             total_psram / (1024.0f * 1024.0f),
+             ((total_psram - free_psram) * 100.0f) / total_psram,
+             free_psram / (1024.0f * 1024.0f));
 
-    // Store buffer and display information in display user data for overflow checking
+    // DIRECT RENDERING MODE: Full screen, single frame, no chunking
+    // This provides the best performance with full-screen buffers and eliminates buffer overflow errors
+    // No partial rendering means no buffer overflow errors from large UI elements
+    lv_display_set_buffers(lvDisp, buf1, buf2, cache_aligned_bytes, LV_DISPLAY_RENDER_MODE_DIRECT);
+
+    ESP_LOGI("HAL", "LVGL display configured in DIRECT mode (full-screen rendering)");
+
+    // Store buffer and display information in display user data
     struct display_info_t {
         size_t buffer_pixels;
         uint32_t width;
@@ -125,7 +135,7 @@ void hal_init(void)
         uint32_t width = display_info->width;
         uint32_t height = display_info->height;
 
-        // Enhanced validation of flush parameters and area bounds with overflow protection
+        // Enhanced validation of flush parameters and area bounds
         if (!px_map || total_pixels <= 0 || total_pixels > (width * height) ||
             area->x1 < 0 || area->y1 < 0 || area->x2 >= (int32_t)width || area->y2 >= (int32_t)height ||
             area->x1 > area->x2 || area->y1 > area->y2) {
@@ -139,10 +149,10 @@ void hal_init(void)
         // Calculate buffer size for cache operations with alignment padding
         size_t pixel_data_size = total_pixels * sizeof(lv_color_t);
 
-        // Buffer overflow check for PARTIAL mode
+        // In DIRECT mode, we should never exceed full screen buffer size
         size_t expected_buffer_size = (display_info->buffer_pixels * sizeof(lv_color_t));
         if (pixel_data_size > expected_buffer_size) {
-            ESP_LOGE("HAL", "Buffer overflow: data_size=%zu > buffer_size=%zu - area too large for PARTIAL buffer",
+            ESP_LOGE("HAL", "Buffer overflow: data_size=%zu > buffer_size=%zu - should not happen in DIRECT mode",
                      pixel_data_size, expected_buffer_size);
             lv_display_flush_ready(disp);
             return;
@@ -180,7 +190,7 @@ void hal_init(void)
     lv_display_set_antialiasing(lvDisp, false);  // Disable antialiasing for better performance
     lv_display_set_dpi(lvDisp, 160);             // Set reasonable DPI for performance
 
-    ESP_LOGI("HAL", "LVGL display created successfully with M5Unified backend and performance optimizations");
+    ESP_LOGI("HAL", "LVGL display created successfully with M5Unified backend and full-screen double buffering");
 }
 
 void hal_touchpad_init(void)
