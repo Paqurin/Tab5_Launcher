@@ -46,56 +46,45 @@ void hal_init(void)
         return;
     }
 
-    // Implement double buffering for smooth transitions and reduced visual artifacts
-    // Use full screen buffer to completely eliminate overflow warnings
-    size_t buffer_pixels = width * height;  // Full screen buffer to handle complex scenes
+    // Use PARTIAL mode with double 1/10 screen buffers for best balance
+    // PARTIAL mode: Works with smaller buffers, double buffering prevents tearing
+    size_t buffer_pixels = (width * height) / 10;  // 1/10 screen = ~92KB buffer
     size_t buffer_bytes = buffer_pixels * sizeof(lv_color_t);
 
     // Ensure buffer size is aligned to ESP32-P4 cache line size (64 bytes) with padding
-    // Add extra padding to prevent boundary issues
     size_t cache_aligned_bytes = ((buffer_bytes + 127) & ~127);  // 128-byte alignment for safety
 
-    // Allocate first buffer with 64-byte alignment for ESP32-P4 DMA optimization
-    // Use cache-aligned size for better DMA performance
-    void* buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-    void* buf2 = NULL;
+    ESP_LOGI("HAL", "Allocating double 1/10 screen buffers (%.1fKB each) for PARTIAL mode",
+             cache_aligned_bytes / 1024.0f);
 
-    if (buf1) {
-        // Try to allocate second buffer for double buffering
+    // Try internal RAM first for maximum speed (double buffering)
+    void* buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+    void* buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+
+    if (!buf1 || !buf2) {
+        // Internal RAM full - use SPIRAM (slower but plenty of space)
+        ESP_LOGI("HAL", "Internal RAM insufficient, using SPIRAM buffers");
+        if (buf1) free(buf1);
+        if (buf2) free(buf2);
+        buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
         buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-
-        if (!buf2) {
-            ESP_LOGW("HAL", "Failed to allocate second buffer in PSRAM, trying internal RAM");
-            buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-        }
     }
 
-    if (!buf1) {
-        ESP_LOGW("HAL", "Failed to allocate full screen buffers in PSRAM, trying 3/4 screen buffer in internal RAM");
-        buffer_pixels = (width * height * 3) / 4;  // 3/4 screen buffer for internal RAM fallback
-        buffer_bytes = buffer_pixels * sizeof(lv_color_t);
-        cache_aligned_bytes = ((buffer_bytes + 127) & ~127);  // Maintain 128-byte alignment
-        buf1 = heap_caps_aligned_alloc(128, cache_aligned_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-    }
-
-    if (!buf1) {
+    if (!buf1 || !buf2) {
         ESP_LOGE("HAL", "Failed to allocate LVGL buffers");
+        if (buf1) free(buf1);
+        if (buf2) free(buf2);
         lv_display_delete(lvDisp);
         lvDisp = NULL;
         return;
     }
 
-    if (buf2) {
-        ESP_LOGI("HAL", "LVGL full screen double buffers allocated: %d bytes each (%d pixels, %dx%d lines)",
-                 (int)buffer_bytes, (int)buffer_pixels, (int)width, (int)(buffer_pixels / width));
-    } else {
-        ESP_LOGI("HAL", "LVGL single buffer allocated: %d bytes (%d pixels, %dx%d lines)",
-                 (int)buffer_bytes, (int)buffer_pixels, (int)width, (int)(buffer_pixels / width));
-    }
+    ESP_LOGI("HAL", "LVGL PARTIAL mode buffers allocated: %d bytes each (%d pixels, %dx%d lines)",
+             (int)buffer_bytes, (int)buffer_pixels, (int)width, (int)(buffer_pixels / width));
 
-    // Use full refresh mode with full screen double buffers for optimal performance
-    // Full refresh eliminates partial rendering artifacts and improves performance
-    lv_display_set_buffers(lvDisp, buf1, buf2, cache_aligned_bytes, LV_DISPLAY_RENDER_MODE_FULL);
+    // Use PARTIAL mode with double buffering for best balance
+    // PARTIAL mode: Works with smaller buffers, chunks rendering, double buffering prevents tearing
+    lv_display_set_buffers(lvDisp, buf1, buf2, cache_aligned_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     // Store buffer and display information in display user data for overflow checking
     struct display_info_t {
