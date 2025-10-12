@@ -28,6 +28,7 @@ static char selected_ssid[64] = {0};
 static bool password_input_visible = false;
 static wifi_scan_result_t scan_results[MAX_SCAN_RESULTS];
 static uint8_t scan_result_count = 0;
+static bool hardware_initialized = false;
 
 // Forward declarations
 static void update_wifi_status(void);
@@ -36,11 +37,17 @@ static void show_wifi_status_message(const char *message, lv_color_t color);
 static void show_password_input(bool show);
 static void populate_network_list(void);
 static void wifi_scan_complete_callback(wifi_scan_result_t *results, uint8_t count);
+static void initialize_wifi_hardware(void);
+static void enable_wifi_controls(bool enable);
 
 // Event handlers
 static void wifi_scan_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
+        if (!hardware_initialized) {
+            show_wifi_status_message("WiFi hardware not initialized", lv_color_hex(0xe74c3c));
+            return;
+        }
         show_wifi_status_message("Scanning for networks...", lv_color_hex(0x3498db));
         esp_err_t ret = wifi_manager_scan_start(wifi_scan_complete_callback);
         if (ret != ESP_OK) {
@@ -53,6 +60,10 @@ static void wifi_scan_event_handler(lv_event_t *e) {
 static void wifi_disconnect_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
+        if (!hardware_initialized) {
+            show_wifi_status_message("WiFi hardware not initialized", lv_color_hex(0xe74c3c));
+            return;
+        }
         show_wifi_status_message("Disconnecting...", lv_color_hex(0xf39c12));
         esp_err_t ret = wifi_manager_disconnect();
         if (ret == ESP_OK) {
@@ -67,6 +78,10 @@ static void wifi_disconnect_event_handler(lv_event_t *e) {
 static void wifi_connect_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
+        if (!hardware_initialized) {
+            show_wifi_status_message("WiFi hardware not initialized", lv_color_hex(0xe74c3c));
+            return;
+        }
         if (strlen(selected_ssid) == 0) {
             show_wifi_status_message("Please select a network", lv_color_hex(0xe74c3c));
             return;
@@ -159,8 +174,8 @@ void create_wifi_controls_screen(void) {
     lv_obj_set_style_pad_all(wifi_info_panel, 15, 0);
 
     wifi_status_label = lv_label_create(wifi_info_panel);
-    lv_label_set_text(wifi_status_label, "WiFi Status: Initializing...");
-    lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xFFFFFF), 0);
+    lv_label_set_text(wifi_status_label, "WiFi Status: Initializing hardware...");
+    lv_obj_set_style_text_color(wifi_status_label, lv_color_hex(0xf39c12), 0);
     lv_obj_set_style_text_font(wifi_status_label, &lv_font_montserrat_16, 0);
     lv_obj_align(wifi_status_label, LV_ALIGN_LEFT_MID, 0, 0);
 
@@ -251,8 +266,10 @@ void create_wifi_controls_screen(void) {
     lv_label_set_text(connect_label, LV_SYMBOL_WIFI " Connect");
     lv_obj_center(connect_label);
 
-    // Initialize WiFi status
-    update_wifi_status();
+    // Disable controls initially until hardware is initialized
+    enable_wifi_controls(false);
+
+    // Populate with empty network list
     populate_network_list();
 
     // Start update timer
@@ -264,6 +281,9 @@ void show_wifi_controls_screen(void) {
         create_wifi_controls_screen();
     }
     lv_screen_load_anim(wifi_controls_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+
+    // Initialize WiFi hardware when screen is shown
+    initialize_wifi_hardware();
 }
 
 void wifi_controls_screen_back(void) {
@@ -311,6 +331,7 @@ void destroy_wifi_controls_screen(void) {
         // Reset state
         memset(selected_ssid, 0, sizeof(selected_ssid));
         password_input_visible = false;
+        hardware_initialized = false;
 
         // Now safely delete the screen
         lv_obj_del(wifi_controls_screen);
@@ -338,6 +359,9 @@ static void wifi_scan_complete_callback(wifi_scan_result_t *results, uint8_t cou
 // Helper function implementations
 static void update_wifi_status(void) {
     if (!wifi_controls_screen || !wifi_status_label) return;
+
+    // Don't update status if hardware is still initializing
+    if (!hardware_initialized) return;
 
     wifi_status_t status = wifi_manager_get_status();
     wifi_credentials_t creds;
@@ -455,5 +479,48 @@ static void show_wifi_status_message(const char *message, lv_color_t color) {
         lv_label_set_text(wifi_status_label, status_text);
         lv_obj_set_style_text_color(wifi_status_label, color, 0);
         ESP_LOGI(TAG, "Status: %s", message);
+    }
+}
+
+static void enable_wifi_controls(bool enable) {
+    if (!wifi_scan_btn || !wifi_disconnect_btn || !wifi_connect_btn) return;
+
+    if (enable) {
+        lv_obj_remove_state(wifi_scan_btn, LV_STATE_DISABLED);
+        lv_obj_remove_state(wifi_disconnect_btn, LV_STATE_DISABLED);
+        lv_obj_remove_state(wifi_connect_btn, LV_STATE_DISABLED);
+    } else {
+        lv_obj_add_state(wifi_scan_btn, LV_STATE_DISABLED);
+        lv_obj_add_state(wifi_disconnect_btn, LV_STATE_DISABLED);
+        lv_obj_add_state(wifi_connect_btn, LV_STATE_DISABLED);
+    }
+}
+
+static void initialize_wifi_hardware(void) {
+    ESP_LOGI(TAG, "Initializing WiFi hardware...");
+
+    // Show initialization status
+    show_wifi_status_message("Initializing hardware...", lv_color_hex(0xf39c12));
+
+    // Call WiFi manager hardware initialization
+    esp_err_t ret = wifi_manager_ensure_hardware_initialized();
+
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "WiFi hardware initialized successfully");
+        show_wifi_status_message("Hardware ready", lv_color_hex(0x27ae60));
+        hardware_initialized = true;
+
+        // Enable WiFi controls
+        enable_wifi_controls(true);
+
+        // Update WiFi status after initialization
+        update_wifi_status();
+    } else {
+        ESP_LOGE(TAG, "WiFi hardware initialization failed: %s", esp_err_to_name(ret));
+        show_wifi_status_message("Hardware init failed - Check connections", lv_color_hex(0xe74c3c));
+        hardware_initialized = false;
+
+        // Keep controls disabled
+        enable_wifi_controls(false);
     }
 }
