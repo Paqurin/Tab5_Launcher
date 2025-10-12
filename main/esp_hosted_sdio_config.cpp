@@ -9,19 +9,8 @@ static const char *TAG = "ESP_HOSTED_SDIO";
 
 static bool s_sdio_initialized = false;
 
-esp_hosted_sdio_pin_config_t esp_hosted_get_default_sdio_config(void) {
-    esp_hosted_sdio_pin_config_t config = {
-        .d0_pin = ESP_HOSTED_SDIO_D0_PIN,
-        .d1_pin = ESP_HOSTED_SDIO_D1_PIN,
-        .d2_pin = ESP_HOSTED_SDIO_D2_PIN,
-        .d3_pin = ESP_HOSTED_SDIO_D3_PIN,
-        .cmd_pin = ESP_HOSTED_SDIO_CMD_PIN,
-        .clk_pin = ESP_HOSTED_SDIO_CLK_PIN,
-        .freq_khz = ESP_HOSTED_SDIO_FREQ_KHZ,
-        .bus_width = ESP_HOSTED_SDIO_BUS_WIDTH
-    };
-    return config;
-}
+// Note: esp_hosted_get_default_sdio_config() is provided by esp_hosted component
+// Removed to avoid multiple definition linker error
 
 esp_err_t esp_hosted_init_c6_power(void) {
     ESP_LOGI(TAG, "Initializing ESP32-C6 power management");

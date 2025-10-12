@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_event.h"
+#include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "freertos/FreeRTOS.h"
@@ -10,80 +11,7 @@
 #include "cJSON.h"
 #include <string.h>
 
-#ifndef CONFIG_IDF_TARGET_ESP32P4
-#include "esp_wifi.h"
-#endif
-
 static const char *TAG = "WIFI_MANAGER";
-
-#ifdef CONFIG_IDF_TARGET_ESP32P4
-// Stub implementations for WiFi functions on ESP32-P4
-
-// Event base definition
-const char* WIFI_EVENT = "WIFI_EVENT";
-
-esp_err_t esp_wifi_init(const wifi_init_config_t *config) {
-    ESP_LOGW(TAG, "esp_wifi_init: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_deinit(void) {
-    ESP_LOGW(TAG, "esp_wifi_deinit: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_set_mode(wifi_mode_t mode) {
-    ESP_LOGW(TAG, "esp_wifi_set_mode: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_start(void) {
-    ESP_LOGW(TAG, "esp_wifi_start: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_stop(void) {
-    ESP_LOGW(TAG, "esp_wifi_stop: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_set_config(wifi_interface_t interface, wifi_config_t *conf) {
-    ESP_LOGW(TAG, "esp_wifi_set_config: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_connect(void) {
-    ESP_LOGW(TAG, "esp_wifi_connect: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_disconnect(void) {
-    ESP_LOGW(TAG, "esp_wifi_disconnect: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_scan_start(const wifi_scan_config_t *config, bool block) {
-    ESP_LOGW(TAG, "esp_wifi_scan_start: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records) {
-    ESP_LOGW(TAG, "esp_wifi_scan_get_ap_records: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    if (number) *number = 0;
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t esp_wifi_sta_get_ap_info(wifi_ap_record_t *ap_info) {
-    ESP_LOGW(TAG, "esp_wifi_sta_get_ap_info: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_netif_t* esp_netif_create_default_wifi_sta(void) {
-    ESP_LOGW(TAG, "esp_netif_create_default_wifi_sta: Not supported on ESP32-P4 (requires ESP-Hosted)");
-    return NULL;
-}
-
-#endif // CONFIG_IDF_TARGET_ESP32P4
 
 // Event group for WiFi events
 static EventGroupHandle_t s_wifi_event_group;
@@ -91,6 +19,7 @@ static const int WIFI_CONNECTED_BIT = BIT0;
 static const int WIFI_FAIL_BIT = BIT1;
 
 // WiFi manager state
+static bool s_hardware_initialized = false;
 static wifi_status_t s_wifi_status = WIFI_STATUS_DISCONNECTED;
 static wifi_status_callback_t s_status_callback = NULL;
 static wifi_scan_callback_t s_scan_callback = NULL;
@@ -107,30 +36,78 @@ static esp_err_t wifi_manager_save_credentials(const wifi_credentials_t *credent
 static esp_err_t wifi_manager_load_credentials(wifi_credentials_t *credentials);
 static void wifi_manager_set_status(wifi_status_t status);
 
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+// ESP32-P4 specific includes for ESP-Hosted
+#include "esp_hosted_sdio_config.h"
+#include "esp_wifi_remote.h"
+#endif
+
+esp_err_t wifi_manager_ensure_hardware_initialized(void) {
+    if (s_hardware_initialized) {
+        ESP_LOGD(TAG, "WiFi hardware already initialized");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Initializing WiFi hardware (lazy initialization)");
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    // Power on ESP32-C6 coprocessor
+    ESP_LOGI(TAG, "Powering on ESP32-C6 coprocessor...");
+    esp_err_t ret = esp_hosted_init_c6_power();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to power on ESP32-C6 coprocessor: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    ESP_LOGI(TAG, "ESP32-C6 coprocessor powered on successfully");
+
+    // Initialize WiFi Remote (provides standard WiFi API via ESP-Hosted)
+    ESP_LOGI(TAG, "Initializing WiFi Remote (ESP-Hosted transport)...");
+    wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ret = esp_wifi_remote_init(&wifi_cfg);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi Remote initialization failed: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Check ESP32-C6 firmware and SDIO connections (GPIOs 8-15)");
+        return ret;
+    }
+    ESP_LOGI(TAG, "WiFi Remote initialized successfully");
+    ESP_LOGI(TAG, "WiFi hardware ready via ESP-Hosted SDIO transport");
+#endif
+
+    s_hardware_initialized = true;
+    return ESP_OK;
+}
+
 esp_err_t wifi_manager_init(wifi_status_callback_t status_callback) {
     ESP_LOGI(TAG, "Initializing WiFi Manager");
-    
+
     s_status_callback = status_callback;
-    
+
+    // Ensure WiFi hardware is initialized (lazy initialization)
+    esp_err_t ret = wifi_manager_ensure_hardware_initialized();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize WiFi hardware: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
     // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
+    ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    
+
     // Initialize network interface
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    
+
     s_sta_netif = esp_netif_create_default_wifi_sta();
     if (!s_sta_netif) {
         ESP_LOGE(TAG, "Failed to create default WiFi STA interface");
         return ESP_FAIL;
     }
-    
-    // Initialize WiFi
+
+    // Initialize WiFi (hardware already initialized by ensure_hardware_initialized)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ret = esp_wifi_init(&cfg);
     if (ret != ESP_OK) {
@@ -384,14 +361,9 @@ esp_err_t wifi_manager_disconnect(void) {
 
 esp_err_t wifi_manager_scan_start(wifi_scan_callback_t scan_callback) {
     ESP_LOGI(TAG, "Starting WiFi scan");
-    
+
     s_scan_callback = scan_callback;
-    
-#ifdef CONFIG_IDF_TARGET_ESP32P4
-    // ESP32-P4 WiFi scanning not implemented - requires ESP-Hosted
-    ESP_LOGW(TAG, "WiFi scan not available on ESP32-P4 (needs ESP-Hosted implementation)");
-    return ESP_ERR_NOT_SUPPORTED;
-#else
+
     wifi_scan_config_t scan_config = {
         .ssid = NULL,
         .bssid = NULL,
@@ -405,9 +377,8 @@ esp_err_t wifi_manager_scan_start(wifi_scan_callback_t scan_callback) {
             }
         }
     };
-    
+
     return esp_wifi_scan_start(&scan_config, false);
-#endif
 }
 
 static esp_err_t wifi_manager_save_credentials(const wifi_credentials_t *credentials) {
