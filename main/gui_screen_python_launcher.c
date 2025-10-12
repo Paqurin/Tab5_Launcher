@@ -286,14 +286,14 @@ void show_python_launcher_screen(void) {
         create_python_launcher_screen();
     }
     update_script_list();
-    lv_screen_load(python_launcher_screen);
+    lv_screen_load_anim(python_launcher_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void python_launcher_screen_back(void) {
     ESP_LOGI(TAG, "Returning to tools screen");
 
     // CRITICAL FIX: Load new screen BEFORE destroying current screen to prevent NULL active screen
-    lv_screen_load(tools_screen);
+    lv_screen_load_anim(tools_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 
     // Now safely destroy Python launcher screen AFTER new screen is active
     destroy_python_launcher_screen();

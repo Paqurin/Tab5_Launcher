@@ -67,23 +67,23 @@ void main_menu_event_handler(lv_event_t *e) {
                 strcpy(current_directory, "/");  // Changed from "/sdcard" to "/"
                 update_file_manager_screen();
                 update_file_list();
-                lv_screen_load(file_manager_screen);
+                lv_screen_load_anim(file_manager_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 break;
             case 1: // Firmware Loader
                 update_firmware_list();
-                lv_screen_load(firmware_loader_screen);
+                lv_screen_load_anim(firmware_loader_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 break;
             case 2: // Run Firmware
                 if (firmware_loader_is_firmware_ready()) {
                     // Show splash screen for user choice
-                    lv_screen_load(splash_screen);
+                    lv_screen_load_anim(splash_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 } else {
                     ESP_LOGW(TAG, "No firmware available to run");
                 }
                 break;
             case 3: // Settings
                 create_settings_screen();
-                lv_screen_load(get_settings_screen());
+                lv_screen_load_anim(get_settings_screen(), LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 break;
             case 4: // Eject Firmware (standard)
                 if (firmware_loader_is_firmware_ready()) {
@@ -93,7 +93,7 @@ void main_menu_event_handler(lv_event_t *e) {
                         ESP_LOGI(TAG, "✓ Firmware ejected successfully");
                         // Refresh the main screen to update button states
                         update_main_screen();
-                        lv_screen_load(main_screen);
+                        lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                     } else {
                         ESP_LOGE(TAG, "Failed to eject firmware: %s", esp_err_to_name(ret));
                     }
@@ -283,7 +283,7 @@ void file_list_event_handler(lv_event_t *e) {
                         esp_err_t ret = text_editor_open_file(full_path);
                         if (ret == ESP_OK) {
                             // CRITICAL: Load new screen BEFORE destroying old screen
-                            lv_screen_load(text_editor_screen);
+                            lv_screen_load_anim(text_editor_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 
                             // CRITICAL FIX: DO NOT destroy the old screen immediately
                             // Let LVGL fully process the screen switch first
@@ -309,7 +309,7 @@ void back_button_event_handler(lv_event_t *e) {
         int screen_id = (int)(uintptr_t)lv_event_get_user_data(e);
         
         if (screen_id == 0) { // Reboot dialog back button
-            lv_screen_load(main_screen);
+            lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         } else if (screen_id == 1) { // File manager back button
             if (strcmp(current_directory, "/") != 0) {  // Changed from "/sdcard" to "/"
                 // Go up one directory
@@ -325,14 +325,14 @@ void back_button_event_handler(lv_event_t *e) {
                     update_file_list();
                 } else {
                     // Already at SD card root, go back to main screen
-                    lv_screen_load(main_screen);
+                    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 }
             } else {
                 // At SD card root, go back to main screen
-                lv_screen_load(main_screen);
+                lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
             }
         } else if (screen_id == 2) { // Firmware loader back button
-            lv_screen_load(main_screen);
+            lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         }
     }
 }
@@ -355,7 +355,7 @@ void flash_firmware_event_handler(lv_event_t *e) {
         lv_obj_add_flag(flash_btn, LV_OBJ_FLAG_HIDDEN);
         
         // Show progress screen
-        lv_screen_load(progress_screen);
+        lv_screen_load_anim(progress_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         
         // Create a copy of the firmware path for the task
         char *firmware_path = malloc(strlen(firmware_files[selected_firmware].full_path) + 1);
@@ -379,7 +379,7 @@ void flash_firmware_event_handler(lv_event_t *e) {
             free(firmware_path);
             set_flashing_state(false);
             lv_obj_remove_flag(flash_btn, LV_OBJ_FLAG_HIDDEN);
-            lv_screen_load(firmware_loader_screen);
+            lv_screen_load_anim(firmware_loader_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         }
     }
 }
@@ -398,16 +398,16 @@ void splash_button_event_handler(lv_event_t *e) {
             esp_err_t ret = firmware_loader_boot_firmware_once();
             if (ret == ESP_OK) {
                 // Show the manual reboot dialog instead of automatically rebooting
-                // lv_screen_load(reboot_dialog_screen); removed since the boot function just reboots the machine
+                // lv_screen_load_anim(reboot_dialog_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false); removed since the boot function just reboots the machine
             } else {
                 ESP_LOGE(TAG, "Failed to configure firmware boot: %s", esp_err_to_name(ret));
                 // Stay on splash screen or go back to main
-                lv_screen_load(main_screen);
+                lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
             }
         } else {
             // Stay in launcher
             ESP_LOGI(TAG, "User selected to stay in launcher");
-            lv_screen_load(main_screen);
+            lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         }
     }
 }

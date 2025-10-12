@@ -209,12 +209,12 @@ void show_calculator_screen(void) {
     if (!calculator_screen) {
         create_calculator_screen();
     }
-    lv_screen_load(calculator_screen);
+    lv_screen_load_anim(calculator_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void calculator_screen_back(void) {
     ESP_LOGI(TAG, "Returning to tools screen");
-    lv_screen_load(tools_screen);
+    lv_screen_load_anim(tools_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void destroy_calculator_screen(void) {

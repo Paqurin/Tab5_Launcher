@@ -36,7 +36,7 @@ esp_err_t gui_manager_init(lv_display_t *disp) {
     
     // Always start with the main launcher screen
     ESP_LOGI(TAG, "Starting with main launcher screen");
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     
     return ESP_OK;
 }

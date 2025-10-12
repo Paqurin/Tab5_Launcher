@@ -216,7 +216,7 @@ static void wifi_back_btn_event_handler(lv_event_t *e) {
     ESP_LOGI(TAG, "Back button clicked");
     
     // Return to main screen
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr) {
@@ -237,7 +237,7 @@ static void wifi_status_callback(wifi_status_t status, uint32_t ip_addr) {
             
             // Auto-return to main screen after successful connection
             vTaskDelay(pdMS_TO_TICKS(2000)); // Show success message for 2 seconds
-            lv_screen_load(main_screen);
+            lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
             break;
             
         case WIFI_STATUS_CONNECTION_FAILED:

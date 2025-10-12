@@ -263,13 +263,13 @@ void show_wifi_controls_screen(void) {
     if (!wifi_controls_screen) {
         create_wifi_controls_screen();
     }
-    lv_screen_load(wifi_controls_screen);
+    lv_screen_load_anim(wifi_controls_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void wifi_controls_screen_back(void) {
     ESP_LOGI(TAG, "Returning to main screen");
     // Load main screen before destroying to prevent active screen deletion
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     // Now safe to clean up wifi controls screen after switching away
     destroy_wifi_controls_screen();
 }

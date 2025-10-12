@@ -21,7 +21,7 @@ static void tools_menu_event_handler(lv_event_t *e) {
             case 0: // Text Editor
                 ESP_LOGI(TAG, "Text Editor selected");
                 create_text_editor_screen();
-                lv_screen_load(text_editor_screen);
+                lv_screen_load_anim(text_editor_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
                 break;
 
             case 1: // Calculator
@@ -155,13 +155,13 @@ void show_tools_screen(void) {
     if (!tools_screen) {
         create_tools_screen();
     }
-    lv_screen_load(tools_screen);
+    lv_screen_load_anim(tools_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void tools_screen_back(void) {
     ESP_LOGI(TAG, "Returning to main screen");
     // CRITICAL FIX: Switch to main screen BEFORE destroying to prevent active screen deletion
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     // Now safe to clean up tools screen after switching away
     destroy_tools_screen();
 }

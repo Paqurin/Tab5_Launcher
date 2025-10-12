@@ -285,13 +285,13 @@ void show_switches_screen(void) {
     if (!switches_screen) {
         create_switches_screen();
     }
-    lv_screen_load(switches_screen);
+    lv_screen_load_anim(switches_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 }
 
 void switches_screen_back(void) {
     ESP_LOGI(TAG, "Returning to main screen");
     // Load main screen before destroying to prevent active screen deletion
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     // Now safe to clean up switches screen after switching away
     destroy_switches_screen();
 }

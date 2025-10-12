@@ -88,13 +88,13 @@ void update_progress_ui(void) {
     // Handle screen transitions first
     if (should_show_splash) {
         should_show_splash = false;
-        lv_screen_load(splash_screen);
+        lv_screen_load_anim(splash_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         return;
     }
     
     if (should_show_main) {
         should_show_main = false;
-        lv_screen_load(main_screen);
+        lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         
         // Stop progress timer when leaving progress screen
         if (progress_timer) {

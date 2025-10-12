@@ -497,7 +497,7 @@ void text_editor_close(void) {
     last_search_term[0] = '\0';
 
     // Return to main screen
-    lv_screen_load(main_screen);
+    lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     ESP_LOGI(TAG, "Text editor closed");
 }
 
@@ -613,7 +613,7 @@ static void open_file_button_event_handler(lv_event_t *e) {
             update_file_list();
 
             // CRITICAL FIX: Load new screen BEFORE destroying current screen
-            lv_screen_load(file_manager_screen);
+            lv_screen_load_anim(file_manager_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
 
             // CRITICAL FIX: DO NOT destroy the old screen immediately
             // Let LVGL fully process the screen switch first
