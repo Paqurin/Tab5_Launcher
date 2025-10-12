@@ -58,17 +58,21 @@ void hal_init(void)
     ESP_LOGI("HAL", "Allocating full-screen double buffers (%.2fMB each) for DIRECT mode",
              cache_aligned_bytes / (1024.0f * 1024.0f));
 
-    // Use SPIRAM for full-screen buffers (3.6MB total for double buffering)
+    // Use SPIRAM for full-screen buffers
+    // - 2 buffers for LVGL double buffering (buf1, buf2)
+    // - 1 buffer for byte-swapped DMA transfer (dma_buf) to preserve LVGL buffer integrity
     // SPIRAM at 200MHz is fast enough for smooth rendering
-    // This uses only ~11% of 32MB PSRAM, leaving plenty for application use
+    // Total: 5.4MB uses only ~17% of 32MB PSRAM
     void* buf1 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
     void* buf2 = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+    void* dma_buf = heap_caps_aligned_alloc(64, cache_aligned_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
 
-    if (!buf1 || !buf2) {
-        ESP_LOGE("HAL", "Failed to allocate full-screen LVGL buffers (%.2fMB each required)",
+    if (!buf1 || !buf2 || !dma_buf) {
+        ESP_LOGE("HAL", "Failed to allocate full-screen buffers (%.2fMB each required)",
                  cache_aligned_bytes / (1024.0f * 1024.0f));
         if (buf1) free(buf1);
         if (buf2) free(buf2);
+        if (dma_buf) free(dma_buf);
         lv_display_delete(lvDisp);
         lvDisp = NULL;
         return;
@@ -77,7 +81,7 @@ void hal_init(void)
     // Log memory usage
     size_t total_psram = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
     size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-    size_t used_buffers = cache_aligned_bytes * 2;
+    size_t used_buffers = cache_aligned_bytes * 3;
 
     ESP_LOGI("HAL", "LVGL DIRECT mode buffers allocated successfully:");
     ESP_LOGI("HAL", "  - Buffer size: %.2fMB each (%.2fMB total for double buffering)",
@@ -102,11 +106,13 @@ void hal_init(void)
         size_t buffer_pixels;
         uint32_t width;
         uint32_t height;
+        void* dma_buffer;  // Separate buffer for byte-swapped DMA transfer
     };
     static display_info_t* display_info = (display_info_t*)malloc(sizeof(display_info_t));
     display_info->buffer_pixels = buffer_pixels;
     display_info->width = width;
     display_info->height = height;
+    display_info->dma_buffer = dma_buf;
     lv_display_set_user_data(lvDisp, display_info);
 
     // Set up flush callback to render via M5GFX with proper DMA synchronization
@@ -124,6 +130,7 @@ void hal_init(void)
             size_t buffer_pixels;
             uint32_t width;
             uint32_t height;
+            void* dma_buffer;
         };
         display_info_t* display_info = (display_info_t*)lv_display_get_user_data(disp);
         if (!display_info) {
@@ -134,6 +141,7 @@ void hal_init(void)
 
         uint32_t width = display_info->width;
         uint32_t height = display_info->height;
+        void* dma_buf = display_info->dma_buffer;
 
         // Enhanced validation of flush parameters and area bounds
         if (!px_map || total_pixels <= 0 || total_pixels > (width * height) ||
@@ -158,31 +166,45 @@ void hal_init(void)
             return;
         }
 
-        // CRITICAL FIX: Perform byte swap BEFORE cache writeback
-        // This ensures the swapped data is what gets written to SPIRAM for DMA transfer
-        lv_draw_sw_rgb565_swap((lv_color_t*)px_map, total_pixels);
+        // CRITICAL FIX: Use separate DMA buffer to preserve LVGL buffer integrity
+        // In DIRECT mode with full-screen buffers, we MUST transfer the ENTIRE screen every time
+        // Partial updates cause smearing because display controller memory gets out of sync
 
-        // Now perform cache writeback AFTER byte swap to sync modified data to SPIRAM
-        // DMA will read the correctly swapped data from SPIRAM
+        // Step 1: Ensure LVGL's full buffer rendering is synced to SPIRAM before copy
         if (esp_ptr_external_ram(px_map)) {
-            size_t aligned_data_size = ((pixel_data_size + 127) & ~127);  // Round up to 128-byte boundary
-            esp_cache_msync(px_map, aligned_data_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+            size_t full_buffer_size = expected_buffer_size;
+            size_t aligned_buffer_size = ((full_buffer_size + 127) & ~127);
+            esp_cache_msync(px_map, aligned_buffer_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
         }
 
-        // Use M5GFX writePixelsDMA with enhanced synchronization
+        // Step 2: Copy ENTIRE buffer to DMA buffer (preserves LVGL buffer for next cycle)
+        memcpy(dma_buf, px_map, expected_buffer_size);
+
+        // Step 3: Byte swap ENTIRE buffer in DMA buffer
+        lv_draw_sw_rgb565_swap((lv_color_t*)dma_buf, display_info->buffer_pixels);
+
+        // Step 4: Writeback entire DMA buffer to SPIRAM for DMA transfer
+        if (esp_ptr_external_ram(dma_buf)) {
+            size_t full_buffer_size = expected_buffer_size;
+            size_t aligned_buffer_size = ((full_buffer_size + 127) & ~127);
+            esp_cache_msync(dma_buf, aligned_buffer_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+        }
+
+        // Use M5GFX writePixelsDMA to transfer FULL SCREEN (not just changed region)
         M5.Display.startWrite();
-        M5.Display.setAddrWindow(area->x1, area->y1, w, h);
+        M5.Display.setAddrWindow(0, 0, width, height);  // Full screen window
 
-        // Perform DMA transfer - writePixelsDMA doesn't return success status
-        M5.Display.writePixelsDMA((uint16_t*)px_map, total_pixels);
+        // Perform DMA transfer of ENTIRE screen to prevent smearing
+        M5.Display.writePixelsDMA((uint16_t*)dma_buf, display_info->buffer_pixels);
 
-        // CRITICAL: Wait for DMA transfer to complete before signaling LVGL
+        // Wait for DMA transfer to complete
         M5.Display.waitDMA();
 
-        // End write operation - M5GFX handles DMA synchronization internally
+        // End write operation
         M5.Display.endWrite();
 
-        // Tell LVGL the flush is complete only after transfer finishes
+        // No swap-back needed - LVGL buffer was never modified
+        // DMA buffer can be reused for next flush
         lv_display_flush_ready(disp);
     });
 
