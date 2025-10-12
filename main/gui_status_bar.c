@@ -209,7 +209,8 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
         if (strcmp(voltage_str, prev_voltage_str) != 0) {
             lv_label_set_text(status_bar->voltage_label, voltage_str);
             strcpy(prev_voltage_str, voltage_str);
-            // Don't call invalidate - LVGL handles this automatically
+            // CRITICAL FIX: Force invalidation in DIRECT mode to prevent text smearing
+            lv_obj_invalidate(status_bar->voltage_label);
         }
     }
 
@@ -224,6 +225,8 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
         if (strcmp(current_str, prev_current_str) != 0) {
             lv_label_set_text(status_bar->current_label, current_str);
             strcpy(prev_current_str, current_str);
+            // CRITICAL FIX: Force invalidation in DIRECT mode to prevent text smearing
+            lv_obj_invalidate(status_bar->current_label);
         }
     }
 
@@ -251,6 +254,8 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
             }
             prev_charging = charging;
             prev_voltage = voltage;
+            // CRITICAL FIX: Force invalidation in DIRECT mode to prevent text smearing
+            lv_obj_invalidate(status_bar->charging_label);
         }
     }
 }
@@ -283,7 +288,8 @@ void gui_status_bar_update_wifi(gui_status_bar_t *status_bar, bool connected, in
         }
         prev_connected = connected;
         prev_rssi_bracket = rssi_bracket;
-        // Don't call invalidate - LVGL handles this
+        // CRITICAL FIX: Force invalidation in DIRECT mode to prevent color smearing
+        lv_obj_invalidate(status_bar->wifi_label);
     }
 }
 
@@ -310,7 +316,8 @@ void gui_status_bar_update_sdcard(gui_status_bar_t *status_bar) {
         }
         prev_mounted = card_mounted;
         prev_detected = card_detected;
-        // Don't call invalidate - LVGL handles this
+        // CRITICAL FIX: Force invalidation in DIRECT mode to prevent color smearing
+        lv_obj_invalidate(status_bar->sdcard_label);
     }
 }
 
@@ -335,13 +342,20 @@ void gui_status_bar_update_time(gui_status_bar_t *status_bar) {
     struct tm *local_time = localtime(&now);
 
     static char time_str[16];
+    static char prev_time_str[16] = {0};
+
     sprintf(time_str, "%02d:%02d:%02d",
             local_time->tm_hour,
             local_time->tm_min,
             local_time->tm_sec);
 
-    lv_label_set_text(status_bar->time_label, time_str);
-    lv_obj_invalidate(status_bar->time_label);
+    // Only update if time string actually changed (optimization)
+    if (strcmp(time_str, prev_time_str) != 0) {
+        lv_label_set_text(status_bar->time_label, time_str);
+        strcpy(prev_time_str, time_str);
+        // CRITICAL FIX: Force invalidation in DIRECT mode to prevent text smearing
+        lv_obj_invalidate(status_bar->time_label);
+    }
 }
 
 esp_err_t gui_status_bar_init_global(lv_obj_t *parent) {
