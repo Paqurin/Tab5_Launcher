@@ -198,13 +198,22 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
 
     static char voltage_str[16];
     static char current_str[16];
+    static char prev_voltage_str[16] = {0};
+    static char prev_current_str[16] = {0};
+    static bool prev_charging = false;
+    static float prev_voltage = -1.0f;
 
+    // Only update voltage if it changed significantly (reduce redraws)
     if (status_bar->voltage_label) {
         sprintf(voltage_str, "%.2f", voltage);
-        lv_label_set_text(status_bar->voltage_label, voltage_str);
-        lv_obj_invalidate(status_bar->voltage_label);
+        if (strcmp(voltage_str, prev_voltage_str) != 0) {
+            lv_label_set_text(status_bar->voltage_label, voltage_str);
+            strcpy(prev_voltage_str, voltage_str);
+            // Don't call invalidate - LVGL handles this automatically
+        }
     }
 
+    // Only update current if it changed
     if (status_bar->current_label) {
         // Fix current sign logic: + when charging, - when discharging
         if (charging) {
@@ -212,67 +221,97 @@ void gui_status_bar_update_power(gui_status_bar_t *status_bar, float voltage, fl
         } else {
             sprintf(current_str, "-%.0f", fabsf(current_ma));
         }
-        lv_label_set_text(status_bar->current_label, current_str);
-        lv_obj_invalidate(status_bar->current_label);
+        if (strcmp(current_str, prev_current_str) != 0) {
+            lv_label_set_text(status_bar->current_label, current_str);
+            strcpy(prev_current_str, current_str);
+        }
     }
 
+    // Only update battery icon if charging state or voltage bracket changed
     if (status_bar->charging_label) {
-        if (charging) {
-            lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_3 LV_SYMBOL_CHARGE);
-            lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0x00FF00), 0);
-        } else if (voltage > 7.5) {
-            lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_FULL);
-            lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0x00FF00), 0);
-        } else if (voltage > 6.5) {
-            lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_3);
-            lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFFFFFF), 0);
-        } else if (voltage > 5.5) {
-            lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_2);
-            lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFFFF00), 0);
-        } else {
-            lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_1);
-            lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFF0000), 0);
+        bool needs_update = (charging != prev_charging) ||
+                           (fabsf(voltage - prev_voltage) > 0.5f);
+
+        if (needs_update) {
+            if (charging) {
+                lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_3 LV_SYMBOL_CHARGE);
+                lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0x00FF00), 0);
+            } else if (voltage > 7.5) {
+                lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_FULL);
+                lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0x00FF00), 0);
+            } else if (voltage > 6.5) {
+                lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_3);
+                lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFFFFFF), 0);
+            } else if (voltage > 5.5) {
+                lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_2);
+                lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFFFF00), 0);
+            } else {
+                lv_label_set_text(status_bar->charging_label, LV_SYMBOL_BATTERY_1);
+                lv_obj_set_style_text_color(status_bar->charging_label, lv_color_hex(0xFF0000), 0);
+            }
+            prev_charging = charging;
+            prev_voltage = voltage;
         }
-        lv_obj_invalidate(status_bar->charging_label);
     }
 }
 
 void gui_status_bar_update_wifi(gui_status_bar_t *status_bar, bool connected, int8_t rssi) {
     if (!status_bar || !status_bar->wifi_label) return;
 
-    if (connected) {
-        // Show connected WiFi with signal strength indication
-        if (rssi > -50) {
-            lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0x00FF00), 0); // Strong signal - green
-        } else if (rssi > -70) {
-            lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0xFFFF00), 0); // Medium signal - yellow
+    static bool prev_connected = false;
+    static int8_t prev_rssi_bracket = 0;
+
+    int8_t rssi_bracket = 0;
+    if (rssi > -50) rssi_bracket = 3;
+    else if (rssi > -70) rssi_bracket = 2;
+    else rssi_bracket = 1;
+
+    // Only update if connection state or signal bracket changed
+    if (connected != prev_connected || (connected && rssi_bracket != prev_rssi_bracket)) {
+        if (connected) {
+            // Show connected WiFi with signal strength indication
+            if (rssi > -50) {
+                lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0x00FF00), 0); // Strong signal - green
+            } else if (rssi > -70) {
+                lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0xFFFF00), 0); // Medium signal - yellow
+            } else {
+                lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0xFF8800), 0); // Weak signal - orange
+            }
         } else {
-            lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0xFF8800), 0); // Weak signal - orange
+            // Disconnected - gray
+            lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0x666666), 0);
         }
-    } else {
-        // Disconnected - gray
-        lv_obj_set_style_text_color(status_bar->wifi_label, lv_color_hex(0x666666), 0);
+        prev_connected = connected;
+        prev_rssi_bracket = rssi_bracket;
+        // Don't call invalidate - LVGL handles this
     }
-    lv_obj_invalidate(status_bar->wifi_label);
 }
 
 void gui_status_bar_update_sdcard(gui_status_bar_t *status_bar) {
     if (!status_bar || !status_bar->sdcard_label) return;
 
+    static bool prev_mounted = false;
+    static bool prev_detected = false;
+
     bool card_mounted = sd_manager_is_mounted();
     bool card_detected = sd_manager_card_detected();
 
-    if (card_mounted) {
-        // Card mounted - show green SD card symbol
-        lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0x00FF00), 0);
-    } else if (card_detected) {
-        // Card detected but not mounted - show white SD card symbol
-        lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0xFFFFFF), 0);
-    } else {
-        // No card detected - show gray SD card symbol
-        lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0x666666), 0);
+    // Only update if state changed
+    if (card_mounted != prev_mounted || card_detected != prev_detected) {
+        if (card_mounted) {
+            // Card mounted - show green SD card symbol
+            lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0x00FF00), 0);
+        } else if (card_detected) {
+            // Card detected but not mounted - show white SD card symbol
+            lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0xFFFFFF), 0);
+        } else {
+            // No card detected - show gray SD card symbol
+            lv_obj_set_style_text_color(status_bar->sdcard_label, lv_color_hex(0x666666), 0);
+        }
+        prev_mounted = card_mounted;
+        prev_detected = card_detected;
+        // Don't call invalidate - LVGL handles this
     }
-    lv_obj_invalidate(status_bar->sdcard_label);
 }
 
 void gui_status_bar_set_visible(gui_status_bar_t *status_bar, bool visible) {
