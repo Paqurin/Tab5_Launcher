@@ -21,15 +21,24 @@ extern "C" {
 #include "gui_screens.h"
 #include "power_monitor.h"
 #include "gui_status_bar.h"
+#include "wifi_manager.h"
+#include "esp_hosted_sdio_config.h"
 }
 #include "hardware_control.h"  // This already has extern "C" guards
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+// ESP-Hosted WiFi Remote initialization for ESP32-P4
+extern "C" {
+#include "esp_wifi_remote.h"
+}
+#endif
 
 
 static const char *TAG = "LAUNCHER";
 static uint32_t boot_timer_start = 0;
 static const uint32_t BOOT_SCREEN_TIMEOUT_MS = 5000; // 5 seconds
 static uint32_t last_power_update = 0;
-static const uint32_t POWER_UPDATE_INTERVAL_MS = 1000; // Update every 1 second
+static const uint32_t POWER_UPDATE_INTERVAL_MS = 5000; // Update every 5 seconds (reduced to minimize I2C bus activity and charging interference)
 // M5Unified RTC helper functions
 static void sync_system_time_from_rtc(void) {
     m5::rtc_datetime_t rtc_time;
@@ -126,8 +135,14 @@ extern "C" void app_main(void) {
     if (hardware_control_init() != ESP_OK) {
         ESP_LOGW(TAG, "Failed to initialize hardware control - switches may not work properly");
     }
-    
+
+    // NOTE: WiFi initialization is now LAZY - it will initialize when the user
+    // opens WiFi settings or attempts to connect. This speeds up boot time and
+    // prevents unnecessary hardware initialization.
+    ESP_LOGI(TAG, "WiFi will initialize on-demand when accessed from UI");
+
     // Initialize SD card (can be configured via config manager)
+    // NOTE: SD card uses GPIOs 39-44 (SDIO), ESP32-C6 uses GPIOs 8-15 (separate SDIO interface)
     ESP_LOGI(TAG, "Initializing SD card...");
     launcher_config_t *config = config_manager_get_current();
     ESP_LOGI(TAG, "SD auto-mount setting: %s", config->system.auto_mount_sd ? "enabled" : "disabled");
@@ -229,10 +244,10 @@ extern "C" void app_main(void) {
         boot_timer_start = xTaskGetTickCount() * portTICK_PERIOD_MS;
         
         // Show splash screen with boot option
-        lv_screen_load(splash_screen);
+        lv_screen_load_anim(splash_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     } else {
         ESP_LOGI(TAG, "No firmware detected, going directly to launcher");
-        lv_screen_load(main_screen);
+        lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
     }
     
     // Main loop
@@ -251,7 +266,7 @@ extern "C" void app_main(void) {
         if (should_show_main) {
             should_show_main = false;
             update_main_screen(); // Refresh the main screen to show updated firmware status
-            lv_screen_load(main_screen);
+            lv_screen_load_anim(main_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
         }
         
         // Update power readings and time periodically
@@ -259,9 +274,10 @@ extern "C" void app_main(void) {
         if (current_time_ms - last_power_update >= POWER_UPDATE_INTERVAL_MS) {
             last_power_update = current_time_ms;
 
-            float voltage = power_monitor_get_voltage();
-            float current_ma = power_monitor_get_current_ma();
-            bool charging = power_monitor_is_charging();
+            // Use batched read to minimize I2C bus activity and reduce charging interference
+            float voltage, current_ma;
+            bool charging;
+            power_monitor_get_all(&voltage, &current_ma, &charging);
 
             ESP_LOGI(TAG, "Power readings: %.2fV, %.1fmA, charging: %s", voltage, current_ma, charging ? "yes" : "no");
 
@@ -294,6 +310,6 @@ extern "C" void app_main(void) {
         // No need for NVS time saving - RTC handles persistence
 
         gui_manager_update();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20)); // Increased from 10ms to 20ms for better performance
     }
 }
