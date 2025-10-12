@@ -158,16 +158,16 @@ void hal_init(void)
             return;
         }
 
-        size_t aligned_data_size = ((pixel_data_size + 127) & ~127);  // Round up to 128-byte boundary
+        // CRITICAL FIX: Perform byte swap BEFORE cache writeback
+        // This ensures the swapped data is what gets written to SPIRAM for DMA transfer
+        lv_draw_sw_rgb565_swap((lv_color_t*)px_map, total_pixels);
 
-        // Optimized cache coherency for ESP32-P4 with minimal operations
+        // Now perform cache writeback AFTER byte swap to sync modified data to SPIRAM
+        // DMA will read the correctly swapped data from SPIRAM
         if (esp_ptr_external_ram(px_map)) {
-            // Single writeback operation before byte swap
+            size_t aligned_data_size = ((pixel_data_size + 127) & ~127);  // Round up to 128-byte boundary
             esp_cache_msync(px_map, aligned_data_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
         }
-
-        // Use LVGL's built-in RGB565 byte swap function for DMA compatibility
-        lv_draw_sw_rgb565_swap((lv_color_t*)px_map, total_pixels);
 
         // Use M5GFX writePixelsDMA with enhanced synchronization
         M5.Display.startWrite();
